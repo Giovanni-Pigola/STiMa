@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block navbar %}
+
+        <link href="http://getbootstrap.com/examples/signin/signin.css" rel="stylesheet">
+
+        <form class="form-signin" role="form" method="post" action=".">
+            {% csrf_token %}
+
+            <h2 class="form-signin-heading">Insira suas informações de Login</h2>
+            <input class="form-control" placeholder="Nome de Usuário" id="id_username" maxlength="254" name="username" type="text" required autofocus=""/>
+            <input type="password" class="form-control" placeholder="Senha" id="id_password" name="password"  required />
+            {% if errado %}
+                <strong>O nome de usuário ou senha está incorreto.</strong><br><br>
+            {% endif %}
+            Esqueceu sua senha? (Função Indisponível) <a href="{% url 'account:redefinirSenha' %}">Clique aqui.</a><br><br>
+            <button class="btn btn-lg btn-primary btn-block" type="submit" value="Submit" >Sign in</button>
+        </form>
+
+{% endblock %}

@@ -1,0 +1,53 @@
+
+{# Load the tag library #}
+{% load bootstrap3 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stima Home</title>
+</head>
+
+<body>
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      {% load static %}<img src="{% static 'images/Stima3.png' %}" height="60" width="125" />
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li><a href="#">Link 1 </a></li>
+        <li><a href="#">Link 2 </a></li>
+      </ul>
+
+      <ul class="nav navbar-nav navbar-right">
+        {% if user.is_authenticated %}
+          <b>Welcome {{ user.username }} !!!</b>
+          <li><a href="{% url 'account:logout' %}">Logout</a></li>
+        {% else %}
+          <li><a href="{% url 'account:login' %}">Login</a></li>
+        {% endif %}
+
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+{% block navbar %}{% endblock%}
+</body>
+</html>
