@@ -1,7 +1,7 @@
 import random
 import datetime
 
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404 #<============###################################### get_object_or_404(filtros)
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
@@ -10,8 +10,16 @@ from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 
-from .models import manager
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from django.contrib.auth.decorators import login_required  #@login_required
+
+# View of redirecting to home page
+@api_view(['GET'])
+@permission_classes((IsAuthenticated, ))
 def home(request):
     return render(request, 'home.html')
 
@@ -51,7 +59,7 @@ def redefinirSenha(request):
             senhaNova = get_random_string(length=8)
             try:
                 usuario = User.objects.get(email=email)
-                send_mail('Redefinição de senha no site Gameception',
+                send_mail('Redefinição de senha',
                           'Sua senha foi redefinida para: ' + senhaNova + '. Essa senha pode ser alterada a qualquer momento, para isso basta acessar o site e clicar em "Alterar Senha", através do menu "Minha Conta"',
                           'support@gameception.com', [email])
                 usuario.set_password(senhaNova)
