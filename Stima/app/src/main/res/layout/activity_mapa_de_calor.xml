@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimary"
+    android:padding="25dp"
+    tools:context="com.example.giovanni.tcc.MapaDeCalorActivity">
+
+    <TextView
+        android:id="@+id/textView4"
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:paddingTop="20dp"
+        android:text="25-05-2017"
+        android:textAlignment="center"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="24sp"
+        android:layout_marginBottom="50dp"
+        android:layout_above="@+id/buttonHeatMapID"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_toLeftOf="@+id/button9"
+        android:layout_toStartOf="@+id/button9" />
+
+    <Button
+        android:id="@+id/button9"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/textView4"
+        android:background="@drawable/calendar" />
+
+    <TextView
+        android:id="@+id/textView8"
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:layout_above="@+id/button9"
+        android:layout_alignLeft="@+id/textView4"
+        android:layout_alignStart="@+id/textView4"
+        android:layout_marginBottom="11dp"
+        android:layout_toLeftOf="@+id/button10"
+        android:layout_toStartOf="@+id/button10"
+        android:paddingTop="20dp"
+        android:text="Quinto Andar"
+        android:textAlignment="center"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="24sp" />
+
+    <Button
+        android:id="@+id/button10"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/textView8"
+        android:background="@drawable/blueprint" />
+
+    <TextView
+        android:id="@+id/textView9"
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:paddingTop="20dp"
+        android:text="Prédio A"
+        android:textAlignment="center"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="24sp"
+        android:layout_above="@+id/textView8"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginBottom="10dp"
+        android:layout_toLeftOf="@+id/button11"
+        android:layout_toStartOf="@+id/button11" />
+
+    <Button
+        android:id="@+id/button11"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/textView9"
+        android:background="@drawable/building" />
+
+    <TextView
+        android:id="@+id/textView10"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/tituloMapaCalor"
+        android:textAlignment="center"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="30sp"
+        android:textStyle="bold|italic"
+        android:layout_marginTop="25dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:id="@+id/buttonHeatMapID"
+        android:layout_width="150dp"
+        android:layout_height="55dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginBottom="55dp"
+        android:background="@color/colorPrimaryDark"
+        android:text="Gerar Mapa"
+        android:textColor="@color/textColorPrimary" />
+
+    <Button
+        android:id="@+id/buttonStatisticsID"
+        android:layout_width="150dp"
+        android:layout_height="55dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/buttonHeatMapID"
+        android:background="@color/colorPrimaryDark"
+        android:text="Gerar Estatísticas"
+        android:textColor="@color/textColorPrimary" />
+</RelativeLayout>

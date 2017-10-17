@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sign_in_url">https://stimadev.herokuapp.com/login/auth/</string>
+    <string name="verify_url">https://stimadev.herokuapp.com/login/verify/</string>
+    <string name="verify_url_refresh_token">https://stimadev.herokuapp.com/login/refresh_token/</string>
+    <string name="air_conditioning_url">https://stimadev.herokuapp.com/ac/get_ac/</string>
+    <string name="air_conditioning_update_url">https://stimadev.herokuapp.com/ac/update_ac/</string>
+    <string name="ligh_url">https://stimadev.herokuapp.com/light/get_light/</string>
+    <string name="ligh_update_url">https://stimadev.herokuapp.com/light/update_light/</string>
+    <string name="door_access">https://stimadev.herokuapp.com/door/access/</string>
+    <string name="handshake">https://stimadev.herokuapp.com/handshake/</string>
+    <string name="predict_zone_url">https://stimadev.herokuapp.com/localization/get/</string>
+
+    <!--string name="sign_in_url">http://192.168.0.107:8000/login/auth/</string>
+    <string name="verify_url">http://192.168.0.107:8000/login/verify/</string>
+    <string name="verify_url_refresh_token">http://192.168.0.107:8000/login/refresh_token/</string>
+    <string name="air_conditioning_url">http://192.168.0.107:8000/ac/get_ac/</string>
+    <string name="air_conditioning_update_url">http://192.168.0.107:8000/ac/update_ac/</string>
+    <string name="ligh_url">http://192.168.0.107:8000/light/get_light/</string>
+    <string name="ligh_update_url">http://192.168.0.107:8000/light/update_light/</string>
+    <string name="door_access">http://192.168.0.107:8000/door/access/</string>
+    <string name="handshake">http://192.168.0.107:8000/handshake/</string>
+    <string name="predict_zone_url">http://192.168.0.107:8000/localization/get/</string-->
+
+    <!--string name="sign_in_url">https://stimadev-2.herokuapp.com//login/auth/</string>
+    <string name="verify_url">https://stimadev-2.herokuapp.com/login/verify/</string>
+    <string name="verify_url_refresh_token">https://stimadev-2.herokuapp.com/login/refresh_token/</string>
+    <string name="air_conditioning_url">https://stimadev-2.herokuapp.com/ac/get_ac/</string>
+    <string name="air_conditioning_update_url">https://stimadev-2.herokuapp.com/ac/update_ac/</string>
+    <string name="ligh_url">https://stimadev-2.herokuapp.com/light/get_light/</string>
+    <string name="ligh_update_url">https://stimadev-2.herokuapp.com/light/update_light/</string>
+    <string name="door_access">https://stimadev-2.herokuapp.com/door/access/</string-->
+
+    <!--string name="predict_zone_url">http://52.15.235.164:2000/singleTest</string-->
+</resources>

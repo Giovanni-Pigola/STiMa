@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimary"
+    android:padding="25dp"
+    tools:context="com.example.giovanni.tcc.ArCondicionadoActivity">
+
+    <TextView
+        android:id="@+id/textTemperaturaID"
+        android:layout_width="120dp"
+        android:layout_height="75dp"
+        android:layout_marginBottom="19dp"
+        android:text="@string/sampleTemperatura"
+        android:textAlignment="center"
+        android:textSize="50sp"
+        android:layout_above="@+id/fanSpeedID"
+        android:layout_alignLeft="@+id/fanSpeedID"
+        android:layout_alignStart="@+id/fanSpeedID" />
+
+    <ImageView
+        android:id="@+id/fanSpeedID"
+        android:layout_width="120dp"
+        android:layout_height="75dp"
+        android:layout_above="@+id/humidityID"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="18dp"
+        android:contentDescription="@string/textoVentilacao"
+        app:srcCompat="@drawable/wind3" />
+
+    <TextView
+        android:id="@+id/acTituloID"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="30dp"
+        android:text="@string/tituloAr"
+        android:textAlignment="center"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="30sp"
+        android:textStyle="bold|italic" />
+
+    <Button
+        android:id="@+id/tempMaisID"
+        android:layout_width="@dimen/larguraArrow"
+        android:layout_height="@dimen/alturaArrow"
+        android:layout_alignBottom="@+id/textTemperaturaID"
+        android:layout_marginLeft="30dp"
+        android:layout_marginStart="30dp"
+        android:layout_toEndOf="@+id/textTemperaturaID"
+        android:layout_toRightOf="@+id/textTemperaturaID"
+        android:background="@color/colorPrimaryDark"
+        android:text="@string/rightArrow"
+        android:textColor="@color/textColorPrimary" />
+
+    <Button
+        android:id="@+id/humidadeMaisID"
+        android:layout_width="@dimen/larguraArrow"
+        android:layout_height="@dimen/alturaArrow"
+        android:layout_alignBottom="@+id/humidityID"
+        android:layout_alignLeft="@+id/tempMaisID"
+        android:layout_alignStart="@+id/tempMaisID"
+        android:background="@color/colorPrimaryDark"
+        android:text="@string/rightArrow"
+        android:textColor="@color/textColorPrimary" />
+
+    <Button
+        android:id="@+id/ventoMaisID"
+        android:layout_width="@dimen/larguraArrow"
+        android:layout_height="@dimen/alturaArrow"
+        android:layout_alignBottom="@+id/fanSpeedID"
+        android:layout_alignLeft="@+id/humidadeMaisID"
+        android:layout_alignStart="@+id/humidadeMaisID"
+        android:background="@color/colorPrimaryDark"
+        android:text="@string/rightArrow"
+        android:textColor="@color/textColorPrimary" />
+
+    <Button
+        android:id="@+id/tempMenosID"
+        android:layout_width="@dimen/larguraArrow"
+        android:layout_height="@dimen/alturaArrow"
+        android:layout_alignBottom="@+id/textTemperaturaID"
+        android:layout_marginEnd="25dp"
+        android:layout_marginRight="25dp"
+        android:layout_toLeftOf="@+id/textTemperaturaID"
+        android:layout_toStartOf="@+id/textTemperaturaID"
+        android:background="@color/colorPrimaryDark"
+        android:text="@string/leftArrow"
+        android:textColor="@color/textColorPrimary" />
+
+    <Button
+        android:id="@+id/humidadeMenosID"
+        android:layout_width="@dimen/larguraArrow"
+        android:layout_height="@dimen/alturaArrow"
+        android:background="@color/colorPrimaryDark"
+        android:text="@string/leftArrow"
+        android:textColor="@color/textColorPrimary"
+        android:layout_below="@+id/fanSpeedID"
+        android:layout_alignLeft="@+id/tempMenosID"
+        android:layout_alignStart="@+id/tempMenosID" />
+
+    <Button
+        android:id="@+id/ventoMenosID"
+        android:layout_width="@dimen/larguraArrow"
+        android:layout_height="@dimen/alturaArrow"
+        android:layout_alignBottom="@+id/fanSpeedID"
+        android:layout_alignLeft="@+id/humidadeMenosID"
+        android:layout_alignStart="@+id/humidadeMenosID"
+        android:background="@color/colorPrimaryDark"
+        android:text="@string/leftArrow"
+        android:textColor="@color/textColorPrimary" />
+
+    <ImageView
+        android:id="@+id/humidityID"
+        android:layout_width="120dp"
+        android:layout_height="75dp"
+        android:layout_alignLeft="@+id/fanSpeedID"
+        android:layout_alignParentBottom="true"
+        android:layout_alignStart="@+id/fanSpeedID"
+        android:layout_marginBottom="101dp"
+        android:contentDescription="@string/textoHumidade"
+        app:srcCompat="@drawable/humidity3" />
+
+    <Button
+        android:id="@+id/acConfirmaButtonID"
+        android:layout_width="150dp"
+        android:layout_height="55dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:background="@color/colorPrimaryDark"
+        android:text="Confirma"
+        android:textColor="@color/textColorPrimary" />
+
+</RelativeLayout>
