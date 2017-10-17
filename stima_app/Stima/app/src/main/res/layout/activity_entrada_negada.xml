@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimary"
+    android:padding="25dp"
+    tools:context="com.example.giovanni.tcc.EntradaNegadaActivity">
+
+    <TextView
+        android:id="@+id/textView12"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="68dp"
+        android:text="Acesso Negado!"
+        android:textAlignment="center"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="44sp" />
+
+    <ImageView
+        android:id="@+id/imageView17"
+        android:layout_width="280dp"
+        android:layout_height="260dp"
+        android:layout_marginTop="57dp"
+        app:srcCompat="@drawable/warning"
+        android:layout_below="@+id/textView12"
+        android:layout_centerHorizontal="true" />
+
+</RelativeLayout>

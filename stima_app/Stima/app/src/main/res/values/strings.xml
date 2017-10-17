@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">TCC</string>
+    <string name="sampleTextDepto">Departamento de Engenharia de computação</string>
+    <string name="sampleNameEmpl">Fulano de Tal</string>
+    <string name="sampleairconditioning">sampleAirConditioning</string>
+    <string name="samplecalendar">sampleCalendar</string>
+    <string name="sampleheatmap">sampleHeatMap</string>
+    <string name="samplelightbulb">sampleLightBulb</string>
+    <string name="sampleprofile">sampleProfile</string>
+    <string name="tituloAr">Controle Ar Condicionado</string>
+    <string name="tituloLuz">Controle da Iluminação</string>
+    <string name="sampleTemperatura">23ºC</string>
+    <string name="leftArrow"><![CDATA[<]]></string>
+    <string name="rightArrow"><![CDATA[>]]></string>
+    <string name="textoVentilacao">imagem ventilação</string>
+    <string name="textoHumidade">imagem humidade</string>
+    <string name="tituloCalendario">Controle de Ponto</string>
+    <string name="tituloMapaCalor">Controle de Movimentação Pessoal</string>
+    <string name="buttonPorta">Abrir</string>
+</resources>
