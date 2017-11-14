@@ -10,12 +10,12 @@
 
     <ImageView
         android:id="@+id/loginLogoId"
-        android:layout_width="180dp"
+        android:layout_width="match_parent"
         android:layout_height="145dp"
-        app:srcCompat="@drawable/featured_placeholder_400x300"
-        android:layout_marginTop="43dp"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="43dp"
+        app:srcCompat="@mipmap/xxbprancheta2" />
 
     <EditText
         android:id="@+id/loginNomeId"

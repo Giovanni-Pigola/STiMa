@@ -23,6 +23,8 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.concurrent.TimeUnit;
@@ -316,12 +318,28 @@ public class AccessToken {
 
 
                         String stringResponseEncrypted = "";
+                        String stringResponseSignature = "";
                         try {
                             stringResponseEncrypted = responseBodyJson.getString("data_encrypted");
-                            //Log.i("enc response login", stringResponseEncrypted);
+                            stringResponseSignature = responseBodyJson.getString("signature");
+                            Log.i("enc response signature", stringResponseSignature);
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
+
+                        Signature signature = null;
+                        try {
+                            signature = Signature.getInstance("SHA512withECDSA");
+                            byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
+                            byte[] signature64 = Base64.decode(stringResponseSignature, Base64.DEFAULT);
+                            signature.update(respose64);
+                            boolean signatureVerified = signature.verify(signature64);
+                            Log.i("signature", String.valueOf(signatureVerified));
+                        } catch (NoSuchAlgorithmException | SignatureException e) {
+                            e.printStackTrace();
+                        }
+
+
 
                         /* decode and decipher server response to get new Access Token */
                         String decipherString = "";
@@ -338,13 +356,7 @@ public class AccessToken {
                             System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
                             decipherString = new String(decodedBytes,"UTF-8");
                             //Log.i("tokens json", decipherString);
-                        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        } catch (NoSuchAlgorithmException e) {
-                            e.printStackTrace();
-                        } catch (NoSuchPaddingException e) {
-                            e.printStackTrace();
-                        } catch (InvalidKeyException e) {
+                        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException e) {
                             e.printStackTrace();
                         }
 

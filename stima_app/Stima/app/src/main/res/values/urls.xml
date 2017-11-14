@@ -10,6 +10,7 @@
     <string name="door_access">https://stimadev.herokuapp.com/door/access/</string>
     <string name="handshake">https://stimadev.herokuapp.com/handshake/</string>
     <string name="predict_zone_url">https://stimadev.herokuapp.com/localization/get/</string>
+    <string name="predict_facility_url">https://stimadev.herokuapp.com/localization/discoverFacility/</string>
 
     <!--string name="sign_in_url">http://192.168.0.107:8000/login/auth/</string>
     <string name="verify_url">http://192.168.0.107:8000/login/verify/</string>

@@ -1,7 +1,10 @@
 package com.example.giovanni.tcc;
 
 import android.app.ProgressDialog;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -12,9 +15,16 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.PersistableBundle;
+import android.support.annotation.ColorRes;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
@@ -23,6 +33,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.giovanni.tcc.Auxiliar.InternalFileReader;
+import com.example.giovanni.tcc.Jobs.LocalizationJob;
 import com.example.giovanni.tcc.Localizacao.Normalization;
 import com.example.giovanni.tcc.Localizacao.ResultResponse;
 import com.example.giovanni.tcc.Localizacao.AcquireCurrentZoneFromServer;
@@ -36,10 +47,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.ref.WeakReference;
 import java.nio.charset.Charset;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,6 +74,9 @@ import okhttp3.Response;
 import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
 
 public class HomeActivity extends AppCompatActivity {
+
+    public static final String MESSENGER_INTENT_KEY
+            = BuildConfig.APPLICATION_ID + ".MESSENGER_INTENT_KEY";
 
     private ImageView airConditioningButton;
     private ImageView lightBulbButton;
@@ -94,21 +111,36 @@ public class HomeActivity extends AppCompatActivity {
 
     private SecretKey secretKey = null;
 
+    private IncomingMessageHandler mHandler;
+    private ComponentName mServiceComponent;
+    private int mJobId = 0;
+    private static final String TAG = HomeActivity.class.getSimpleName();
+
+    private SharedPreferences pref;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
+        pref = this.getSharedPreferences("FacilityID", Context.MODE_PRIVATE);
+
         /* finishes activity on NFC read */
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("com.hello.action");
-        registerReceiver(receiver, filter);
+//        IntentFilter filter = new IntentFilter();
+//        filter.addAction("com.hello.action");
+//        registerReceiver(receiver, filter);
 
         /* receive facility ID for positioning requests*/
-        extras = getIntent().getExtras();
-        if(extras!=null){
-            facilityID = (String) extras.get("facilityID");
-        }
+//        extras = getIntent().getExtras();
+//        if(extras!=null){
+//            facilityID = (String) extras.get("facilityID");
+//        }
+
+        facilityID = pref.getString("FacilityID","");
+        Log.i("autofind", facilityID);
+
+        mHandler = new IncomingMessageHandler(this);
+        mServiceComponent = new ComponentName(this, LocalizationJob.class);
 
         airConditioningButton = (ImageView) findViewById(R.id.airConditioningId);
         lightBulbButton = (ImageView) findViewById(R.id.lightId);
@@ -195,29 +227,47 @@ public class HomeActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Start service and provide it a way to communicate with this class.
+//        Intent startServiceIntent = new Intent(this, LocalizationJob.class);
+//        Messenger messengerIncoming = new Messenger(mHandler);
+//        startServiceIntent.putExtra(MESSENGER_INTENT_KEY, messengerIncoming);
+//        startService(startServiceIntent);
+    }
+
+    @Override
+    protected void onStop() {
+        SharedPreferences.Editor editor = pref.edit();
+        editor.clear();
+        editor.apply();
+        super.onStop();
+    }
+
     /**
      *
      * Listens to the NFC read intent in order to finish other opened activities
      *
      * **/
-    BroadcastReceiver receiver = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            finish();
-
-        }
-    };
+//    BroadcastReceiver receiver = new BroadcastReceiver() {
+//
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            finish();
+//
+//        }
+//    };
 
     /**
      *
      * Calls for the standard finish() function
      *
      * **/
-    public void finish() {
-        unregisterReceiver(receiver);
-        super.finish();
-    };
+//    public void finish() {
+//        unregisterReceiver(receiver);
+//        super.finish();
+//    };
 
     /**
      *
@@ -353,12 +403,30 @@ public class HomeActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
+
+
+
                 /* get encrypted JSON */
                 String stringResponseEncrypted = "";
+                String stringResponseSignature = "";
                 try {
                     stringResponseEncrypted = responseBodyJsonEncrypted.getString("data_encrypted");
+                    stringResponseSignature = responseBodyJsonEncrypted.getString("signature");
+                    Log.i("enc response signature", stringResponseSignature);
                     Log.i("enc response login", stringResponseEncrypted);
                 } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                Signature signature = null;
+                try {
+                    signature = Signature.getInstance("SHA512withECDSA");
+                    byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
+                    byte[] signature64 = Base64.decode(stringResponseSignature, Base64.DEFAULT);
+                    signature.update(respose64);
+                    boolean signatureVerified = signature.verify(signature64);
+                    Log.i("signature", String.valueOf(signatureVerified));
+                } catch (NoSuchAlgorithmException | SignatureException e) {
                     e.printStackTrace();
                 }
 
@@ -377,13 +445,7 @@ public class HomeActivity extends AppCompatActivity {
                     System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
                     decipherString = new String(decodedBytes,"UTF-8");
                     //Log.i("tokens json", decipherString);
-                } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                } catch (NoSuchPaddingException e) {
-                    e.printStackTrace();
-                } catch (InvalidKeyException e) {
+                } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException e) {
                     e.printStackTrace();
                 }
 
@@ -676,6 +738,9 @@ public class HomeActivity extends AppCompatActivity {
                         try {
                             isRequestOver = false;
                             acquireCurrentZoneFromServer.run(client, normalization.normalize(),HomeActivity.this, HomeActivity.this );
+                            facilityID = pref.getString("FacilityID","");
+                            Log.i("autofind", facilityID);
+                            acquireCurrentZoneFromServer.setFacilityID(facilityID);
                             isRequestOver = acquireCurrentZoneFromServer.getRequestOver();
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -734,4 +799,93 @@ public class HomeActivity extends AppCompatActivity {
             overridePendingTransition(0, 0);
         }
     }
+
+    /**
+     * Executed when user clicks on SCHEDULE JOB.
+     */
+    public void scheduleJob(View v) {
+        JobInfo.Builder builder = new JobInfo.Builder(mJobId++, mServiceComponent);
+
+
+//        // Extras, work duration.
+//        PersistableBundle extras = new PersistableBundle();
+//        extras.putLong(WORK_DURATION_KEY, Long.valueOf(workDuration) * 1000);
+//        builder.setExtras(extras);
+
+        // Schedule job
+        Log.d(TAG, "Scheduling job");
+        JobScheduler tm = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        tm.schedule(builder.build());
+    }
+
+    private static class IncomingMessageHandler extends Handler {
+
+        // Prevent possible leaks with a weak reference.
+        private WeakReference<HomeActivity> mActivity;
+
+        IncomingMessageHandler(HomeActivity activity) {
+            super(/* default looper */);
+            this.mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            HomeActivity mainActivity = mActivity.get();
+            if (mainActivity == null) {
+                // Activity is no longer available, exit.
+                return;
+            }
+
+            Message m;
+//            switch (msg.what) {
+//                /*
+//                 * Receives callback from the service when a job has landed
+//                 * on the app. Turns on indicator and sends a message to turn it off after
+//                 * a second.
+//                 */
+//                case MSG_COLOR_START:
+//                    // Start received, turn on the indicator and show text.
+//                    showStartView.setBackgroundColor(getColor(R.color.start_received));
+//                    updateParamsTextView(msg.obj, "started");
+//
+//                    // Send message to turn it off after a second.
+//                    m = Message.obtain(this, MSG_UNCOLOR_START);
+//                    sendMessageDelayed(m, 1000L);
+//                    break;
+//                /*
+//                 * Receives callback from the service when a job that previously landed on the
+//                 * app must stop executing. Turns on indicator and sends a message to turn it
+//                 * off after two seconds.
+//                 */
+//                case MSG_COLOR_STOP:
+//                    // Stop received, turn on the indicator and show text.
+//                    showStopView.setBackgroundColor(getColor(R.color.stop_received));
+//                    updateParamsTextView(msg.obj, "stopped");
+//
+//                    // Send message to turn it off after a second.
+//                    m = obtainMessage(MSG_UNCOLOR_STOP);
+//                    sendMessageDelayed(m, 2000L);
+//                    break;
+//                case MSG_UNCOLOR_START:
+//                    showStartView.setBackgroundColor(getColor(R.color.none_received));
+//                    updateParamsTextView(null, "");
+//                    break;
+//                case MSG_UNCOLOR_STOP:
+//                    showStopView.setBackgroundColor(getColor(R.color.none_received));
+//                    updateParamsTextView(null, "");
+//                    break;
+//            }
+        }
+
+//        private void updateParamsTextView(@Nullable Object jobId, String action) {
+//            TextView paramsTextView = (TextView) mActivity.get().findViewById(R.id.task_params);
+//            if (jobId == null) {
+//                paramsTextView.setText("");
+//                return;
+//            }
+//            String jobIdText = String.valueOf(jobId);
+//            paramsTextView.setText(String.format("Job ID %s %s", jobIdText, action));
+//        }
+    }
+
 }

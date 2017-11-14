@@ -3,6 +3,7 @@ package com.example.giovanni.tcc.Localizacao;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.TextView;
@@ -252,32 +253,218 @@ public class AcquireCurrentZoneFromServer {
                     }
 
                     try {
-                        //jsonObject = new responseBodyJsonDecrypted(currentZone.replace("\\", ""));
-
                         resultResponse.setZonaName(responseBodyJsonDecrypted.getString("ZonaName"));
-                        //resultResponse.setConfidence(String.valueOf(jsonObject.getDouble("Confidence")));
-
                         Log.i("Resposta Local", resultResponse.getZonaName());
+
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                    final String localizacao = resultResponse.getZonaName();
 
-                    //Log.i("AAAIIAAII", localizacao);
-                    //activity2.setStringLocalizacao(localizacao);
+                    final String localizacao = resultResponse.getZonaName();
 
                     activity2.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            //Log.i("AAAIIAAII", localizacao);
                             activity2.setStringLocalizacao(localizacao);
                         }
                     });
 
 
-                    //zoneName.setText(resultResponse.getZonaName());
-                    //String placeText = "Confidence: " + resultResponse.getConfidence();
-                    //confidence.setText(placeText);
+
+
+                    response.close();
+                    isRequestOver = true;
+                }
+            });
+        } else {
+
+            final SharedPreferences pref = mContext.getSharedPreferences("FacilityID", Context.MODE_PRIVATE);
+            final SharedPreferences.Editor editor = pref.edit();
+            for (AccessPoint ap : accessPoints) {
+                apJSON = new JSONObject();
+                apJSON.put("BSSID", ap.getBSSID());
+                apJSON.put("RSSI", ap.getRSSI());
+                acquisitionsJSONArray.put(apJSON);
+            }
+
+            try {
+                InternalFileReader IFR = new InternalFileReader();
+                FID = mContext.openFileInput("UID");
+
+                FJWT = mContext.openFileInput("JWToken");
+                tokenLido = IFR.readFile(FJWT);
+                //Log.i("tokenlidoHome", tokenLido);
+                FJWT.close();
+
+                FJWR = mContext.openFileInput("JWRefreshToken");
+                refreshTokenLido = IFR.readFile(FJWR);
+                //Log.i("refreshTokenlidoHome", refreshTokenLido);
+                FJWR.close();
+
+            } catch (FileNotFoundException e) {
+                Log.i("FILE", "FILE NOT FOUND HOME");
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.i("IOE", "HOME");
+                e.printStackTrace();
+            }
+
+            requestBodyJSON.put("access_points", acquisitionsJSONArray);
+            MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+
+            JSONObject jsonBodyParamsEncrypted = new JSONObject();
+
+             /*encode login AES*/
+            byte[] SYMKEYb = null;
+            try {
+                FileInputStream SYMKEY = mContext.openFileInput("secretKey");
+                SYMKEYb = new byte[SYMKEY.available()];
+                SYMKEY.read(SYMKEYb);
+                SYMKEY.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            String cipherString = "";
+            byte[] encodedBytes = null;
+            try {
+                secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
+                //Log.i("key received length", String.valueOf(SYMKEYb.length));
+                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+                byte[] cipherIV = cipher.getIV();
+                String cipherIVString = new String(cipherIV, "UTF-8");
+                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
+                encodedBytes = cipher.doFinal((cipherIVString + requestBodyJSON.toString()).getBytes(Charset.forName("UTF-8")));
+                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
+                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
+
+            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (NoSuchPaddingException e) {
+                e.printStackTrace();
+            } catch (InvalidKeyException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                jsonBodyParamsEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            RequestBody requestBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+
+            Request request = new Request.Builder()
+                    .url(mContext.getString(R.string.predict_facility_url))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "JWT " + tokenLido)
+                    .post(requestBody)
+                    .build();
+            Log.i("Request headers", String.valueOf(request.headers()));
+            Log.i("Request data", String.valueOf(requestBodyJSON.toString()));
+            Log.i("Encrypted acquisition", cipherString);
+            Log.i("Request info", String.valueOf(request));
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    e.printStackTrace();
+
+                    //runOnUiThread(new Runnable() {
+                    //    @Override
+                    //    public void run() {
+                    //
+                    //                "AAAAASomething went wrong, try again later", Toast.LENGTH_SHORT);
+                    //        toast.show();
+                    //    }
+                    //});
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                        //runOnUiThread(new Runnable() {
+                        //    @Override
+                        //    public void run() {
+                        //
+                        //                "BBBBBSomething went wrong, try again later", Toast.LENGTH_SHORT);
+                        //        toast.show();
+                        //    }
+                        //});
+                        throw new IOException("Unexpected code " + response);
+                    }
+
+                    currentZone = response.body().string();
+                    //currentZone = currentZone.substring(2, currentZone.length() - 2);
+                    JSONObject jsonObject = null;
+                    try {
+                        jsonObject = new JSONObject(currentZone);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                        /* get encrypted JSON */
+                    String stringResponseEncrypted = "";
+                    try {
+                        stringResponseEncrypted = jsonObject.getString("data_encrypted");
+                        Log.i("enc response login", stringResponseEncrypted);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                        /* decode and decipher server response to get token set */
+                    String decipherString = "";
+                    byte[] decodedBytes = null;
+                    try {
+                        byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
+                        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                        cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+                        byte[] respose16 = cipher.doFinal(respose64);
+                        //Log.i("respose16", String.valueOf(respose16.length));
+                        //Log.i("respose16", String.valueOf(respose16.length - 15));
+                        decodedBytes = new byte[respose16.length - 16];
+                        //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
+                        System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
+                        decipherString = new String(decodedBytes, "UTF-8");
+                        //Log.i("Position response", decipherString);
+                    } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchPaddingException e) {
+                        e.printStackTrace();
+                    } catch (InvalidKeyException e) {
+                        e.printStackTrace();
+                    }
+
+                    JSONObject responseBodyJsonDecrypted = null;
+                    try {
+                        responseBodyJsonDecrypted = new JSONObject(decipherString);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    String localizacao="";
+                    try {
+                        assert responseBodyJsonDecrypted != null;
+                        localizacao = responseBodyJsonDecrypted.getString("FacilityID");
+                        Log.i("Resposta Local", localizacao);
+                        Log.i("no facility", "aqui");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+//                    activity2.runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            activity2.setStringLocalizacao(localizacao);
+//                        }
+//                    });
+
+                    editor.putString("FacilityID", localizacao);
+                    editor.apply();
 
                     response.close();
                     isRequestOver = true;
