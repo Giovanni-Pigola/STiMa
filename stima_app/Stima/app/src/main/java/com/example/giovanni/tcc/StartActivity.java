@@ -43,6 +43,7 @@ import java.util.UUID;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyAgreement;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
@@ -62,9 +63,6 @@ public class StartActivity extends AppCompatActivity {
     private FileOutputStream FOID;
     private FileOutputStream FOJWT;
     private FileOutputStream FOJWR;
-    private FileOutputStream FOPVTK;
-    private FileOutputStream FOPBCK;
-    private FileOutputStream FOPBCKS;
 
     private FileInputStream FID;
     private FileInputStream FJWT;
@@ -75,6 +73,10 @@ public class StartActivity extends AppCompatActivity {
     private Key publicKey = null;
     private Key privateKey = null;
     private Key publicKeyServer = null;
+
+    private Key publicKeySign = null;
+    private Key privateKeySign = null;
+    private Key publicKeyServerSign = null;
 
     private Boolean keyExists;
     private Boolean UIDExists = false;
@@ -87,7 +89,7 @@ public class StartActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //setContentView(R.layout.activity_start);
+        setContentView(R.layout.activity_start);
 
         /* try to open UID from internal memory */
         try {
@@ -132,7 +134,7 @@ public class StartActivity extends AppCompatActivity {
 
             Log.i("len b Public 2", String.valueOf(encKey1.length));
             X509EncodedKeySpec xencoded = new X509EncodedKeySpec(encKey1);
-            publicKey = KeyFactory.getInstance("RSA").generatePublic(xencoded);
+            publicKey = KeyFactory.getInstance("EC").generatePublic(xencoded);
             Log.i("publicKey", Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
 
             FileInputStream keyPriv = openFileInput("privateKey");
@@ -142,7 +144,7 @@ public class StartActivity extends AppCompatActivity {
 
             Log.i("len b Private 2", String.valueOf(encKey2.length));
             PKCS8EncodedKeySpec pkcsencoded = new PKCS8EncodedKeySpec(encKey2);
-            privateKey = KeyFactory.getInstance("RSA").generatePrivate(pkcsencoded);
+            privateKey = KeyFactory.getInstance("EC").generatePrivate(pkcsencoded);
             Log.i("privateKey", Base64.encodeToString(privateKey.getEncoded(), Base64.DEFAULT));
 
             FileInputStream keyPubS = openFileInput("publicKeyServer");
@@ -152,8 +154,41 @@ public class StartActivity extends AppCompatActivity {
 
             Log.i("len b Public Server", String.valueOf(encKey3.length));
             X509EncodedKeySpec pubServerEncoded = new X509EncodedKeySpec(encKey3);
-            publicKeyServer = KeyFactory.getInstance("RSA").generatePublic(pubServerEncoded);
+            publicKeyServer = KeyFactory.getInstance("EC").generatePublic(pubServerEncoded);
             Log.i("server publicKey", Base64.encodeToString(publicKeyServer.getEncoded(), Base64.DEFAULT));
+
+            //////////////////////////////////////////////////////////////////
+
+
+            FileInputStream keyPubSign = openFileInput("publicKeySign");
+            byte[] encKey1Sign = new byte[keyPubSign.available()];
+            keyPubSign.read(encKey1Sign);
+            keyPubSign.close();
+
+            Log.i("len b Public 2", String.valueOf(encKey1Sign.length));
+            X509EncodedKeySpec xencodedSign = new X509EncodedKeySpec(encKey1Sign);
+            publicKeySign = KeyFactory.getInstance("EC").generatePublic(xencodedSign);
+            Log.i("publicKey", Base64.encodeToString(publicKeySign.getEncoded(), Base64.DEFAULT));
+
+            FileInputStream keyPrivSign = openFileInput("privateKeySign");
+            byte[] encKey2Sign = new byte[keyPrivSign.available()];
+            keyPrivSign.read(encKey2Sign);
+            keyPrivSign.close();
+
+            Log.i("len b Private 2", String.valueOf(encKey2Sign.length));
+            PKCS8EncodedKeySpec pkcsencodedSign = new PKCS8EncodedKeySpec(encKey2Sign);
+            privateKeySign = KeyFactory.getInstance("EC").generatePrivate(pkcsencodedSign);
+            Log.i("privateKey", Base64.encodeToString(privateKeySign.getEncoded(), Base64.DEFAULT));
+
+            FileInputStream keyPubSSign = openFileInput("publicKeyServerSign");
+            byte[] encKey3Sign = new byte[keyPubSSign.available()];
+            keyPubSSign.read(encKey3Sign);
+            keyPubSSign.close();
+
+            Log.i("len b Public Server", String.valueOf(encKey3Sign.length));
+            X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(encKey3Sign);
+            publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+            Log.i("server publicKey", Base64.encodeToString(publicKeyServerSign.getEncoded(), Base64.DEFAULT));
 
             keyExists = true;
 
@@ -166,42 +201,94 @@ public class StartActivity extends AppCompatActivity {
         /* creates keypair and generate server public key in case any of the mentioned keys doesn't exist */
         if (!keyExists){
             try {
-                byte[] serverPublicKey = Base64.decode("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", Base64.DEFAULT);
+                byte[] serverPublicKey = Base64.decode("MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBLq2LFjgKbIoSdo8+jG7vBiIAGPFYFWy7tgkB4f6ZtamycZoz7VLd4tP7zkORGvW3MC/awChWREUshSb+0+q31PkBAKxM7TCLPVKDNbF5pXpVHa+yMfbeXhp3vR+XLSyRWUL5VDG7nqSSvAkDZphFi1Nd4kShqdh7hp8ZdH4Kp27miGk=", Base64.DEFAULT);
+                byte[] serverPublicKeySign = Base64.decode("MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAotgA8yaFWZ5WGpUOzBaDDmWPrwEDLx2OT0E+F0rSROE5+Qn+grStvdI5K1EXx4Et7z4+VIt1QEV1EsF8MPsxmAoASDLlWYHbKtCodJzi6SGVKdgZuzrTVPq9cXF/WilHq4ELnmC4Q52hO+ivHJPls5/cehpnbQ50fwWBfAXAEl620xs=", Base64.DEFAULT);
 
                 KeyPairGenerator kpg = null;
-                kpg = KeyPairGenerator.getInstance("RSA");
+                kpg = KeyPairGenerator.getInstance("EC");
 
                 /*generate keypair based on UUID*/
                 SecureRandom random = new SecureRandom(UIDb);
 
-                kpg.initialize(15360, random);
+                kpg.initialize(521, random);
                 KeyPair kp = kpg.genKeyPair();
                 publicKey = kp.getPublic();
                 Log.i("publicKey", Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
                 privateKey = kp.getPrivate();
                 Log.i("privateKey", Base64.encodeToString(privateKey.getEncoded(), Base64.DEFAULT));
 
-                FOPBCK = openFileOutput("publicKey", Context.MODE_PRIVATE);
+                FileOutputStream FOPBCK = openFileOutput("publicKey", Context.MODE_PRIVATE);
                 Log.i("format Public", publicKey.getFormat());
                 Log.i("len b Public", String.valueOf(publicKey.getEncoded().length));
                 FOPBCK.write(publicKey.getEncoded());
                 FOPBCK.close();
 
-                FOPVTK = openFileOutput("privateKey", Context.MODE_PRIVATE);
+                FileOutputStream FOPVTK = openFileOutput("privateKey", Context.MODE_PRIVATE);
                 Log.i("format Private", privateKey.getFormat());
                 Log.i("len b Private", String.valueOf(privateKey.getEncoded().length));
                 FOPVTK.write(privateKey.getEncoded());
                 FOPVTK.close();
 
-                FOPBCKS = openFileOutput("publicKeyServer", Context.MODE_PRIVATE);
+                FileOutputStream FOPBCKS = openFileOutput("publicKeyServer", Context.MODE_PRIVATE);
                 X509EncodedKeySpec pubServerEncoded = new X509EncodedKeySpec(serverPublicKey);
-                publicKeyServer = KeyFactory.getInstance("RSA").generatePublic(pubServerEncoded);
+                publicKeyServer = KeyFactory.getInstance("EC").generatePublic(pubServerEncoded);
                 //Log.i("format Public", publicKey.getFormat());
                 //Log.i("len b Public", String.valueOf(publicKey.getEncoded().length));
                 FOPBCKS.write(publicKeyServer.getEncoded());
                 FOPBCKS.close();
 
-            } catch (NoSuchAlgorithmException | IOException | InvalidKeySpecException e) {
+                /////////////////////////////////////////////////////////////////////
+
+                KeyPairGenerator kpgSign = null;
+                kpgSign = KeyPairGenerator.getInstance("EC");
+
+                /*generate keypair based on UUID*/
+                SecureRandom randomSign = new SecureRandom(UIDb);
+
+                kpgSign.initialize(521, randomSign);
+                KeyPair kpSign = kpgSign.genKeyPair();
+                publicKeySign = kpSign.getPublic();
+                Log.i("publicKeySign", Base64.encodeToString(publicKeySign.getEncoded(), Base64.DEFAULT));
+                privateKeySign = kpSign.getPrivate();
+                Log.i("privateKeySign", Base64.encodeToString(privateKeySign.getEncoded(), Base64.DEFAULT));
+
+                FileOutputStream FOPBCKSign = openFileOutput("publicKeySign", Context.MODE_PRIVATE);
+                Log.i("format Public Sign", publicKeySign.getFormat());
+                Log.i("len b Public Sign", String.valueOf(publicKeySign.getEncoded().length));
+                FOPBCKSign.write(publicKeySign.getEncoded());
+                FOPBCKSign.close();
+
+                FileOutputStream FOPVTKSign = openFileOutput("privateKeySign", Context.MODE_PRIVATE);
+                Log.i("format Private Sign", privateKeySign.getFormat());
+                Log.i("len b Private Sign", String.valueOf(privateKeySign.getEncoded().length));
+                FOPVTKSign.write(privateKeySign.getEncoded());
+                FOPVTKSign.close();
+
+                FileOutputStream FOPBCKSSign = openFileOutput("publicKeyServerSign", Context.MODE_PRIVATE);
+                X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(serverPublicKeySign);
+                publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+                //Log.i("format Public Sign", publicKeySign.getFormat());
+                //Log.i("len b Public Sign", String.valueOf(publicKeySign.getEncoded().length));
+                FOPBCKSSign.write(publicKeyServerSign.getEncoded());
+                FOPBCKSSign.close();
+
+                ///////////////////////////////////////////////////////////////////
+
+                KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH");
+                keyAgreement.init(privateKey);
+                keyAgreement.doPhase(publicKeyServer, true);
+
+                byte[] secretKey = keyAgreement.generateSecret();
+
+                byte[] decodedKeyBytes = new byte[32];
+                //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
+                System.arraycopy(secretKey, 0, decodedKeyBytes, 0, decodedKeyBytes.length);
+                FileOutputStream FOSSYM = openFileOutput("secretKey", Context.MODE_PRIVATE);
+                FOSSYM.write(decodedKeyBytes);
+                FOSSYM.close();
+
+
+            } catch (NoSuchAlgorithmException | IOException | InvalidKeySpecException | InvalidKeyException e) {
                 e.printStackTrace();
             }
         }
@@ -209,9 +296,9 @@ public class StartActivity extends AppCompatActivity {
 
         accessToken = new AccessToken();
 
-        new StartActivity.doHandShake().execute(publicKey, publicKeyServer, privateKey);
+//        new StartActivity.doHandShake().execute(publicKey, publicKeyServer, privateKey);
 
-//        new StartActivity.tryInstaLogin().execute();
+        new StartActivity.tryInstaLogin().execute();
 
     }
 
@@ -298,181 +385,181 @@ public class StartActivity extends AppCompatActivity {
      * At the end of the process the function calls for the instant login function
      *
      *  **/
-    private class doHandShake extends AsyncTask<Key, Void, Response> {
-
-        @Override
-        protected void onPreExecute() {
-//            loadingDialog = ProgressDialog.show(HomeActivity.this,
-//                    "Please wait...", "Getting data from server");
-//            loadingDialog.setCancelable(false);
-        }
-
-        protected Response doInBackground(Key... params) {
-
-            MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-            OkHttpClient client = new OkHttpClient();
-
-            JSONObject jsonBodyParams = new JSONObject();
-            JSONObject jsonBodyParamsEncrypted = new JSONObject();
-
-            /* reado UID from internal memory */
-            try {
-                FileInputStream FISU = openFileInput("UID");
-                InternalFileReader IFR = new InternalFileReader();
-                UIDstring = IFR.readFile(FISU);
-                FISU.close();
-                //Log.i("UID lido", UIDstring);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            /* insert UID and Base64 encoded User public key in JSON */
-            try {
-                jsonBodyParams.put("userID", UIDstring);
-                jsonBodyParams.put("publicKey", Base64.encodeToString(params[0].getEncoded(), Base64.DEFAULT));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            /* creates symmetric key generator with 256 bit key defined */
-            SecretKey handshakeSecretKey = null;
-            try {
-                KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-                keyGenerator.init(256); // AES is currently available in three key sizes: 128, 192 and 256 bits.The design and strength of all key lengths of the AES algorithm are sufficient to protect classified information up to the SECRET level
-                handshakeSecretKey = keyGenerator.generateKey();
-
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-
-            /* creates key and ciphers JSON using it */
-            String cipherHandshakeString = "";
-            byte[] encryptedHandshake = null;
-            try {
-                byte[] raw = handshakeSecretKey.getEncoded();
-                SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
-                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                //Log.i("keysizehandshake", String.valueOf(skeySpec.getEncoded().length));
-                cipher.init(Cipher.ENCRYPT_MODE, skeySpec, new IvParameterSpec(new byte[16]));
-                byte[] cipherIV = cipher.getIV();
-                String cipherIVString = new String(cipherIV,"UTF-8");
-                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
-                encryptedHandshake = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
-                cipherHandshakeString = Base64.encodeToString(encryptedHandshake, Base64.DEFAULT);
-                Log.i("sym key 64", Base64.encodeToString(raw, Base64.DEFAULT));
-
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            }
-
-            /* ciphers previous key usig server public key */
-            byte[] encodedBytes = null;
-            try {
-                Cipher c = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-                c.init(Cipher.ENCRYPT_MODE, publicKeyServer);
-                encodedBytes = c.doFinal(handshakeSecretKey.getEncoded());
-            } catch (Exception e) {
-                Log.e("encrypted", "RSA encryption error");
-                e.printStackTrace();
-            }
-
-            /* insert both ciphered texts in new JSON */
-            try {
-                jsonBodyParamsEncrypted.put("data_encrypted", cipherHandshakeString);
-                jsonBodyParamsEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            /* send new JSON to server */
-            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
-            Request request = new Request.Builder()
-                    .url(getResources().getString(R.string.handshake))
-                    .header("Content-Type", "application/json")
-                    .post(loginBody)
-                    .build();
-            Log.i("Request header", String.valueOf(request.headers()));
-            Log.i("Request data", String.valueOf(jsonBodyParams.toString()));
-            Log.i("Encrypted data", cipherHandshakeString);
-            Log.i("Encrypted key", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-            Log.i("Request info", String.valueOf(request));
-            Response response = null;
-
-            try {
-                response = client.newCall(request).execute();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-            return response;
-
-        }
-
-        protected void onPostExecute(Response response) {
-
-//            loadingDialog.dismiss();
-
-            if (response.isSuccessful()) {
-                JSONObject responseBodyJson = null;
-                String responseString = null;
-
-                String encryptedDataR = "";
-                try {
-                    responseBodyJson = new JSONObject(response.body().string());
-                    encryptedDataR = responseBodyJson.getString("data_encrypted");
-                    Log.i("Encrypted response key", encryptedDataR);
-                } catch (IOException | JSONException e) {
-                    e.printStackTrace();
-                }
-
-                /* decodes and decipher server response to get session symmetric key */
-                byte[] decodedBytesR = null;
-                String decryptedDataR = "";
-                SecretKey secretKey = null;
-                try {
-                    byte[] SYMKEY64 = Base64.decode(encryptedDataR, Base64.DEFAULT);
-                    Cipher d = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-                    d.init(Cipher.DECRYPT_MODE, privateKey);
-                    decodedBytesR = d.doFinal(SYMKEY64);
-                    byte[] SYMKEY = Base64.decode(decodedBytesR, Base64.DEFAULT);
-                    //Log.i("decoded key lenght", String.valueOf(SYMKEY.length));
-                    secretKey = new SecretKeySpec(SYMKEY, 0, SYMKEY.length, "AES");
-                    //decryptedDataR = new String(,"UTF-8");
-                    //Log.i("decoded key", decryptedDataR);
-                    Log.i("sym key 64", Base64.encodeToString(secretKey.getEncoded(), Base64.DEFAULT));
-                } catch (Exception e) {
-                    Log.e("decoded", "RSA decryption error");
-                    e.printStackTrace();
-                }
-
-                /* writes session symmetric key to internal memory */
-                try {
-                    FileOutputStream FOSSYM = openFileOutput("secretKey", Context.MODE_PRIVATE);
-                    FOSSYM.write(secretKey.getEncoded());
-                    FOSSYM.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            } else {
-
-                Toast toast = Toast.makeText(StartActivity.this,
-                        "Something went wrong, try again later", Toast.LENGTH_SHORT);
-                toast.show();
-                Log.i("response handshake", response.toString());
-                Log.i("response handshake", response.body().toString());
-
-            }
-            new StartActivity.tryInstaLogin().execute();
-
-        }
-    }
+//    private class doHandShake extends AsyncTask<Key, Void, Response> {
+//
+//        @Override
+//        protected void onPreExecute() {
+////            loadingDialog = ProgressDialog.show(HomeActivity.this,
+////                    "Please wait...", "Getting data from server");
+////            loadingDialog.setCancelable(false);
+//        }
+//
+//        protected Response doInBackground(Key... params) {
+//
+//            MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+//            OkHttpClient client = new OkHttpClient();
+//
+//            JSONObject jsonBodyParams = new JSONObject();
+//            JSONObject jsonBodyParamsEncrypted = new JSONObject();
+//
+//            /* reado UID from internal memory */
+//            try {
+//                FileInputStream FISU = openFileInput("UID");
+//                InternalFileReader IFR = new InternalFileReader();
+//                UIDstring = IFR.readFile(FISU);
+//                FISU.close();
+//                //Log.i("UID lido", UIDstring);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//
+//            /* insert UID and Base64 encoded User public key in JSON */
+//            try {
+//                jsonBodyParams.put("userID", UIDstring);
+//                jsonBodyParams.put("publicKey", Base64.encodeToString(params[0].getEncoded(), Base64.DEFAULT));
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//
+//            /* creates symmetric key generator with 256 bit key defined */
+//            SecretKey handshakeSecretKey = null;
+//            try {
+//                KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+//                keyGenerator.init(256); // AES is currently available in three key sizes: 128, 192 and 256 bits.The design and strength of all key lengths of the AES algorithm are sufficient to protect classified information up to the SECRET level
+//                handshakeSecretKey = keyGenerator.generateKey();
+//
+//            } catch (NoSuchAlgorithmException e) {
+//                e.printStackTrace();
+//            }
+//
+//            /* creates key and ciphers JSON using it */
+//            String cipherHandshakeString = "";
+//            byte[] encryptedHandshake = null;
+//            try {
+//                byte[] raw = handshakeSecretKey.getEncoded();
+//                SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
+//                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+//                //Log.i("keysizehandshake", String.valueOf(skeySpec.getEncoded().length));
+//                cipher.init(Cipher.ENCRYPT_MODE, skeySpec, new IvParameterSpec(new byte[16]));
+//                byte[] cipherIV = cipher.getIV();
+//                String cipherIVString = new String(cipherIV,"UTF-8");
+//                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
+//                encryptedHandshake = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
+//                cipherHandshakeString = Base64.encodeToString(encryptedHandshake, Base64.DEFAULT);
+//                Log.i("sym key 64", Base64.encodeToString(raw, Base64.DEFAULT));
+//
+//            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
+//                e.printStackTrace();
+//            } catch (NoSuchAlgorithmException e) {
+//                e.printStackTrace();
+//            } catch (NoSuchPaddingException e) {
+//                e.printStackTrace();
+//            } catch (InvalidKeyException e) {
+//                e.printStackTrace();
+//            }
+//
+//            /* ciphers previous key usig server public key */
+//            byte[] encodedBytes = null;
+//            try {
+//                Cipher c = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
+//                c.init(Cipher.ENCRYPT_MODE, publicKeyServer);
+//                encodedBytes = c.doFinal(handshakeSecretKey.getEncoded());
+//            } catch (Exception e) {
+//                Log.e("encrypted", "RSA encryption error");
+//                e.printStackTrace();
+//            }
+//
+//            /* insert both ciphered texts in new JSON */
+//            try {
+//                jsonBodyParamsEncrypted.put("data_encrypted", cipherHandshakeString);
+//                jsonBodyParamsEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//
+//            /* send new JSON to server */
+//            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+//            Request request = new Request.Builder()
+//                    .url(getResources().getString(R.string.handshake))
+//                    .header("Content-Type", "application/json")
+//                    .post(loginBody)
+//                    .build();
+//            Log.i("Request header", String.valueOf(request.headers()));
+//            Log.i("Request data", String.valueOf(jsonBodyParams.toString()));
+//            Log.i("Encrypted data", cipherHandshakeString);
+//            Log.i("Encrypted key", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+//            Log.i("Request info", String.valueOf(request));
+//            Response response = null;
+//
+//            try {
+//                response = client.newCall(request).execute();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//
+//
+//            return response;
+//
+//        }
+//
+//        protected void onPostExecute(Response response) {
+//
+////            loadingDialog.dismiss();
+//
+//            if (response.isSuccessful()) {
+//                JSONObject responseBodyJson = null;
+//                String responseString = null;
+//
+//                String encryptedDataR = "";
+//                try {
+//                    responseBodyJson = new JSONObject(response.body().string());
+//                    encryptedDataR = responseBodyJson.getString("data_encrypted");
+//                    Log.i("Encrypted response key", encryptedDataR);
+//                } catch (IOException | JSONException e) {
+//                    e.printStackTrace();
+//                }
+//
+//                /* decodes and decipher server response to get session symmetric key */
+//                byte[] decodedBytesR = null;
+//                String decryptedDataR = "";
+//                SecretKey secretKey = null;
+//                try {
+//                    byte[] SYMKEY64 = Base64.decode(encryptedDataR, Base64.DEFAULT);
+//                    Cipher d = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
+//                    d.init(Cipher.DECRYPT_MODE, privateKey);
+//                    decodedBytesR = d.doFinal(SYMKEY64);
+//                    byte[] SYMKEY = Base64.decode(decodedBytesR, Base64.DEFAULT);
+//                    //Log.i("decoded key lenght", String.valueOf(SYMKEY.length));
+//                    secretKey = new SecretKeySpec(SYMKEY, 0, SYMKEY.length, "AES");
+//                    //decryptedDataR = new String(,"UTF-8");
+//                    //Log.i("decoded key", decryptedDataR);
+//                    Log.i("sym key 64", Base64.encodeToString(secretKey.getEncoded(), Base64.DEFAULT));
+//                } catch (Exception e) {
+//                    Log.e("decoded", "RSA decryption error");
+//                    e.printStackTrace();
+//                }
+//
+//                /* writes session symmetric key to internal memory */
+//                try {
+//                    FileOutputStream FOSSYM = openFileOutput("secretKey", Context.MODE_PRIVATE);
+//                    FOSSYM.write(secretKey.getEncoded());
+//                    FOSSYM.close();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//
+//            } else {
+//
+//                Toast toast = Toast.makeText(StartActivity.this,
+//                        "Something went wrong, try again later", Toast.LENGTH_SHORT);
+//                toast.show();
+//                Log.i("response handshake", response.toString());
+//                Log.i("response handshake", response.body().toString());
+//
+//            }
+//            new StartActivity.tryInstaLogin().execute();
+//
+//        }
+//    }
 
 }

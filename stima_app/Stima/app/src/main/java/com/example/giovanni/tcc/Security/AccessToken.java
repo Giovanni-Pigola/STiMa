@@ -23,9 +23,12 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.concurrent.TimeUnit;
 
@@ -74,6 +77,10 @@ public class AccessToken {
     private Key privateKey = null;
     private Key publicKeyServer = null;
 
+    private Key publicKeySign = null;
+    private Key privateKeySign = null;
+    private Key publicKeyServerSign = null;
+
     private SecretKey secretKey = null;
 
     /**
@@ -114,11 +121,9 @@ public class AccessToken {
 
             //Log.i("len b Public Server", String.valueOf(encKey3.length));
             X509EncodedKeySpec pubServerEncoded = new X509EncodedKeySpec(encKey3);
-            publicKeyServer = KeyFactory.getInstance("RSA").generatePublic(pubServerEncoded);
+            publicKeyServer = KeyFactory.getInstance("EC").generatePublic(pubServerEncoded);
             //Log.i("server publicKey", Base64.encodeToString(publicKeyServer.getEncoded(), Base64.DEFAULT));
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeySpecException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
         }
 
@@ -130,79 +135,60 @@ public class AccessToken {
         client = builder.build();
 
         if (token!=null){
+
+            /* reads symmetric key from internal memory for signature */
+            byte[] signed = null;
+            try {
+                FileInputStream keyPrivSign = context.openFileInput("privateKeySign");
+                byte[] encKey2Sign = new byte[keyPrivSign.available()];
+                keyPrivSign.read(encKey2Sign);
+                keyPrivSign.close();
+
+                Log.i("len b Private 2", String.valueOf(encKey2Sign.length));
+                PKCS8EncodedKeySpec pkcsencodedSign = new PKCS8EncodedKeySpec(encKey2Sign);
+                privateKeySign = KeyFactory.getInstance("EC").generatePrivate(pkcsencodedSign);
+
+                FileInputStream keyPubSign = context.openFileInput("publicKeySign");
+                byte[] encKey1Sign = new byte[keyPubSign.available()];
+                keyPubSign.read(encKey1Sign);
+                keyPubSign.close();
+
+                Log.i("len b Public 2", String.valueOf(encKey1Sign.length));
+                X509EncodedKeySpec xencodedSign = new X509EncodedKeySpec(encKey1Sign);
+                publicKeySign = KeyFactory.getInstance("EC").generatePublic(xencodedSign);
+
+                FileInputStream keyPubSSign = context.openFileInput("publicKeyServerSign");
+                byte[] encKey3Sign = new byte[keyPubSSign.available()];
+                keyPubSSign.read(encKey3Sign);
+                keyPubSSign.close();
+
+                Log.i("len b Public Server", String.valueOf(encKey3Sign.length));
+                X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(encKey3Sign);
+                publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+
+                Signature signature = Signature.getInstance("SHA512withECDSA");
+                signature.initSign((PrivateKey) privateKeySign);
+                signature.update(token.getBytes());
+                signed = signature.sign();
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | SignatureException | InvalidKeyException e) {
+                e.printStackTrace();
+            }
+
             /* Puts Access Token in first JSON */
             try {
-                jsonBodyParams.put("token", token);
+                jsonBodyParams.put("data", token);
+                jsonBodyParams.put("userID", userID);
+                jsonBodyParams.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
                 //Log.i("tokenLidoInternal", token);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
             JSONObject jsonBodyParamsRSA = new JSONObject();
-            JSONObject jsonBodyParamsEncrypted = new JSONObject();
             JSONObject jsonBodyParamsRefreshEncrypted = new JSONObject();
 
-            /* Puts Access Token in second JSON */
-            try {
-                jsonBodyParamsRSA.put("userID", userID);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            /* get symmetric key from memory*/
-            byte[] SYMKEYb = null;
-            try {
-                FileInputStream SYMKEY = context.openFileInput("secretKey");
-                SYMKEYb = new byte[SYMKEY.available()];
-                SYMKEY.read(SYMKEYb);
-                SYMKEY.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            /* cipher first JSON with symmetric key */
-            String cipherString = "";
-            byte[] encodedBytes = null;
-            try {
-                secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
-                //Log.i("key received length", String.valueOf(SYMKEYb.length));
-                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                byte[] cipherIV = cipher.getIV();
-                String cipherIVString = new String(cipherIV,"UTF-8");
-                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
-                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
-                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
-                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            }
-            /* cipher second JSON with server public key*/
-            byte[] encodedBytesRSA = null;
-            try {
-                Cipher c = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-                c.init(Cipher.ENCRYPT_MODE, publicKeyServer);
-                encodedBytesRSA = c.doFinal(jsonBodyParamsRSA.toString().getBytes());
-            } catch (Exception e) {
-                Log.e("encrypted", "RSA encryption error");
-            }
-
-            /* build new JSON with ciphered texts */
-            try {
-                jsonBodyParamsEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-                jsonBodyParamsEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytesRSA, Base64.DEFAULT));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
             /* make request to server */
-            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParams.toString());
             Request request = new Request.Builder()
                     .url(context.getResources().getString(R.string.verify_url))
                     .header("Content-Type", "application/json")
@@ -210,8 +196,6 @@ public class AccessToken {
                     .build();
             Log.i("Request Header", String.valueOf(request.headers()));
             Log.i("Request data", String.valueOf(jsonBodyParams.toString()));
-            Log.i("Encrypted token", cipherString);
-            Log.i("Encrypted UID", Base64.encodeToString(encodedBytesRSA, Base64.DEFAULT));
             Log.i("Request info", String.valueOf(request));
             Response response = null;
 
@@ -235,11 +219,24 @@ public class AccessToken {
                         e.printStackTrace();
                     }
 
+                    /* get symmetric key from memory*/
+                    byte[] SYMKEYb = null;
+                    try {
+                        FileInputStream SYMKEY = context.openFileInput("secretKey");
+                        SYMKEYb = new byte[SYMKEY.available()];
+                        SYMKEY.read(SYMKEYb);
+                        SYMKEY.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
                     /* cipher fist JSON with symmetric key*/
                     String cipherStringRefresh = "";
                     byte[] encodedBytesRefresh = null;
+                    byte[] signedRefresh = null;
                     try {
                         //Log.i("key received length", String.valueOf(SYMKEYb.length));
+                        secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
                         Cipher cipherRefresh = Cipher.getInstance("AES/CBC/PKCS5Padding");
                         cipherRefresh.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
                         byte[] cipherIV = cipherRefresh.getIV();
@@ -248,30 +245,21 @@ public class AccessToken {
                         encodedBytesRefresh = cipherRefresh.doFinal((cipherIVString + jsonBodyParamsRefresh.toString()).getBytes(Charset.forName("UTF-8")));
                         cipherStringRefresh = Base64.encodeToString(encodedBytesRefresh, Base64.DEFAULT);
                         //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
-                    } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    } catch (NoSuchAlgorithmException e) {
-                        e.printStackTrace();
-                    } catch (NoSuchPaddingException e) {
-                        e.printStackTrace();
-                    } catch (InvalidKeyException e) {
-                        e.printStackTrace();
-                    }
 
-                    /* cipher second JSON with server public key */
-                    byte[] encodedBytesRefreshRSA = null;
-                    try {
-                        Cipher cr = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-                        cr.init(Cipher.ENCRYPT_MODE, publicKeyServer);
-                        encodedBytesRefreshRSA = cr.doFinal(jsonBodyParamsRSA.toString().getBytes());
-                    } catch (Exception e) {
-                        Log.e("encrypted", "RSA encryption error");
+                        Signature signatureRefresh = Signature.getInstance("SHA512withECDSA");
+                        signatureRefresh.initSign((PrivateKey) privateKeySign);
+                        signatureRefresh.update(encodedBytesRefresh);
+                        signedRefresh = signatureRefresh.sign();
+
+                    } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
+                        e.printStackTrace();
                     }
 
                     /* build new JSON with ciphered texts */
                     try {
-                        jsonBodyParamsRefreshEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytesRefresh, Base64.DEFAULT));
-                        jsonBodyParamsRefreshEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytesRefreshRSA, Base64.DEFAULT));
+                        jsonBodyParamsRefreshEncrypted.put("data", Base64.encodeToString(encodedBytesRefresh, Base64.DEFAULT));
+                        jsonBodyParamsRefreshEncrypted.put("userID", userID);
+                        jsonBodyParamsRefreshEncrypted.put("signature", Base64.encodeToString(signedRefresh, Base64.DEFAULT));
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -285,8 +273,8 @@ public class AccessToken {
                             .build();
                     Log.i("Request Header", String.valueOf(requestRefresh.headers()));
                     Log.i("Request data", String.valueOf(jsonBodyParamsRefresh.toString()));
+                    Log.i("Request data", String.valueOf(jsonBodyParamsRefreshEncrypted.toString()));
                     Log.i("Encrypted token", cipherStringRefresh);
-                    Log.i("Encrypted UID", Base64.encodeToString(encodedBytesRefreshRSA, Base64.DEFAULT));
                     Log.i("Request info", String.valueOf(requestRefresh));
                     Response responseRefresh = null;
 
@@ -320,43 +308,42 @@ public class AccessToken {
                         String stringResponseEncrypted = "";
                         String stringResponseSignature = "";
                         try {
-                            stringResponseEncrypted = responseBodyJson.getString("data_encrypted");
+                            stringResponseEncrypted = responseBodyJson.getString("data");
                             stringResponseSignature = responseBodyJson.getString("signature");
                             Log.i("enc response signature", stringResponseSignature);
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
 
-                        Signature signature = null;
-                        try {
-                            signature = Signature.getInstance("SHA512withECDSA");
-                            byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
-                            byte[] signature64 = Base64.decode(stringResponseSignature, Base64.DEFAULT);
-                            signature.update(respose64);
-                            boolean signatureVerified = signature.verify(signature64);
-                            Log.i("signature", String.valueOf(signatureVerified));
-                        } catch (NoSuchAlgorithmException | SignatureException e) {
-                            e.printStackTrace();
-                        }
-
-
-
                         /* decode and decipher server response to get new Access Token */
                         String decipherString = "";
                         byte[] decodedBytes = null;
                         try {
                             byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
-                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                            cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                            byte[] respose16 = cipher.doFinal(respose64);
-                            //Log.i("respose16", String.valueOf(respose16.length));
-                            //Log.i("respose16", String.valueOf(respose16.length - 15));
-                            decodedBytes = new byte[respose16.length - 16];
-                            //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
-                            System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
-                            decipherString = new String(decodedBytes,"UTF-8");
-                            //Log.i("tokens json", decipherString);
-                        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException e) {
+                            byte[] signature64 = Base64.decode(stringResponseSignature, Base64.DEFAULT);
+
+                            Signature signature = Signature.getInstance("SHA512withECDSA");
+                            signature.initVerify((PublicKey) publicKeyServerSign);
+                            signature.update(respose64);
+                            boolean signatureVerified = signature.verify(signature64);
+
+                            if (signatureVerified){
+                                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                                cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+                                byte[] respose16 = cipher.doFinal(respose64);
+                                //Log.i("respose16", String.valueOf(respose16.length));
+                                //Log.i("respose16", String.valueOf(respose16.length - 15));
+                                decodedBytes = new byte[respose16.length - 16];
+                                //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
+                                System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
+                                decipherString = new String(decodedBytes,"UTF-8");
+                                //Log.i("tokens json", decipherString);
+                            } else {
+                                return loggedIn = false;
+                                /* notify user on error? */
+                            }
+
+                        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException | SignatureException e) {
                             e.printStackTrace();
                         }
 
@@ -444,11 +431,9 @@ public class AccessToken {
 
             //Log.i("len b Public Server", String.valueOf(encKey3.length));
             X509EncodedKeySpec pubServerEncoded = new X509EncodedKeySpec(encKey3);
-            publicKeyServer = KeyFactory.getInstance("RSA").generatePublic(pubServerEncoded);
+            publicKeyServer = KeyFactory.getInstance("EC").generatePublic(pubServerEncoded);
             //Log.i("server publicKey", Base64.encodeToString(publicKeyServer.getEncoded(), Base64.DEFAULT));
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeySpecException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
         }
 
@@ -460,80 +445,59 @@ public class AccessToken {
         client = builder.build();
 
         if (token!=null){
+            /* reads symmetric key from internal memory for signature */
+            byte[] signed = null;
+            try {
+                FileInputStream keyPrivSign = context.openFileInput("privateKeySign");
+                byte[] encKey2Sign = new byte[keyPrivSign.available()];
+                keyPrivSign.read(encKey2Sign);
+                keyPrivSign.close();
+
+                Log.i("len b Private 2", String.valueOf(encKey2Sign.length));
+                PKCS8EncodedKeySpec pkcsencodedSign = new PKCS8EncodedKeySpec(encKey2Sign);
+                privateKeySign = KeyFactory.getInstance("EC").generatePrivate(pkcsencodedSign);
+
+                FileInputStream keyPubSign = context.openFileInput("publicKeySign");
+                byte[] encKey1Sign = new byte[keyPubSign.available()];
+                keyPubSign.read(encKey1Sign);
+                keyPubSign.close();
+
+                Log.i("len b Public 2", String.valueOf(encKey1Sign.length));
+                X509EncodedKeySpec xencodedSign = new X509EncodedKeySpec(encKey1Sign);
+                publicKeySign = KeyFactory.getInstance("EC").generatePublic(xencodedSign);
+
+                FileInputStream keyPubSSign = context.openFileInput("publicKeyServerSign");
+                byte[] encKey3Sign = new byte[keyPubSSign.available()];
+                keyPubSSign.read(encKey3Sign);
+                keyPubSSign.close();
+
+                Log.i("len b Public Server", String.valueOf(encKey3Sign.length));
+                X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(encKey3Sign);
+                publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+
+                Signature signature = Signature.getInstance("SHA512withECDSA");
+                signature.initSign((PrivateKey) privateKeySign);
+                signature.update(token.getBytes());
+                signed = signature.sign();
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | SignatureException | InvalidKeyException e) {
+                e.printStackTrace();
+            }
+
             /* Puts Access Token in first JSON */
             try {
-                jsonBodyParams.put("token", token);
-                Log.i("tokenLidoInternal", token);
+                jsonBodyParams.put("data", token);
+                jsonBodyParams.put("userID", userID);
+                jsonBodyParams.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
             JSONObject jsonBodyParamsRSA = new JSONObject();
-            JSONObject jsonBodyParamsEncrypted = new JSONObject();
             JSONObject jsonBodyParamsRefreshEncrypted = new JSONObject();
 
-            /* Puts Access Token in second JSON */
-            try {
-                jsonBodyParamsRSA.put("userID", userID);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            /* get symmetric key from memory*/
-            byte[] SYMKEYb = null;
-            try {
-                FileInputStream SYMKEY = context.openFileInput("secretKey");
-                SYMKEYb = new byte[SYMKEY.available()];
-                SYMKEY.read(SYMKEYb);
-                SYMKEY.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            /* cipher fist JSON with symmetric key*/
-            String cipherString = "";
-            byte[] encodedBytes = null;
-            try {
-                secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
-                //Log.i("key received length", String.valueOf(SYMKEYb.length));
-                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                byte[] cipherIV = cipher.getIV();
-                String cipherIVString = new String(cipherIV,"UTF-8");
-                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
-                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
-                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
-                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            }
-
-            /* cipher second JSON with server public key*/
-            byte[] encodedBytesRSA = null;
-            try {
-                Cipher c = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-                c.init(Cipher.ENCRYPT_MODE, publicKeyServer);
-                encodedBytesRSA = c.doFinal(jsonBodyParamsRSA.toString().getBytes());
-            } catch (Exception e) {
-                Log.e("encrypted", "RSA encryption error");
-            }
-
-            /* build new JSON with ciphered texts */
-            try {
-                jsonBodyParamsEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-                jsonBodyParamsEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytesRSA, Base64.DEFAULT));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
 
             /* make request to server */
-            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParams.toString());
             Request request = new Request.Builder()
                     .url(context.getResources().getString(R.string.verify_url))
                     .header("Content-Type", "application/json")
@@ -541,8 +505,6 @@ public class AccessToken {
                     .build();
             Log.i("Request Header", String.valueOf(request.headers()));
             Log.i("Request data", String.valueOf(jsonBodyParams.toString()));
-            Log.i("Encrypted token", cipherString);
-            Log.i("Encrypted UID", Base64.encodeToString(encodedBytesRSA, Base64.DEFAULT));
             Log.i("Request info", String.valueOf(request));
             Response response = null;
 
@@ -566,11 +528,24 @@ public class AccessToken {
                         e.printStackTrace();
                     }
 
+                    /* get symmetric key from memory*/
+                    byte[] SYMKEYb = null;
+                    try {
+                        FileInputStream SYMKEY = context.openFileInput("secretKey");
+                        SYMKEYb = new byte[SYMKEY.available()];
+                        SYMKEY.read(SYMKEYb);
+                        SYMKEY.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
                     /* cipher fist JSON with symmetric key*/
                     String cipherStringRefresh = "";
                     byte[] encodedBytesRefresh = null;
+                    byte[] signedRefresh = null;
                     try {
                         //Log.i("key received length", String.valueOf(SYMKEYb.length));
+                        secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
                         Cipher cipherRefresh = Cipher.getInstance("AES/CBC/PKCS5Padding");
                         cipherRefresh.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
                         byte[] cipherIV = cipherRefresh.getIV();
@@ -580,30 +555,21 @@ public class AccessToken {
                         cipherStringRefresh = Base64.encodeToString(encodedBytesRefresh, Base64.DEFAULT);
                         //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
                         //Log.i("sym key 64", cipherStringRefresh);
-                    } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    } catch (NoSuchAlgorithmException e) {
-                        e.printStackTrace();
-                    } catch (NoSuchPaddingException e) {
-                        e.printStackTrace();
-                    } catch (InvalidKeyException e) {
+
+                        Signature signatureRefresh = Signature.getInstance("SHA512withECDSA");
+                        signatureRefresh.initSign((PrivateKey) privateKeySign);
+                        signatureRefresh.update(encodedBytesRefresh);
+                        signedRefresh = signatureRefresh.sign();
+
+                    } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | SignatureException e) {
                         e.printStackTrace();
                     }
-                    /* cipher second JSON with server public key */
-                    byte[] encodedBytesRefreshRSA = null;
-                    try {
-                        Cipher cr = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-                        cr.init(Cipher.ENCRYPT_MODE, publicKeyServer);
-                        encodedBytesRefreshRSA = cr.doFinal(jsonBodyParamsRSA.toString().getBytes());
-                    } catch (Exception e) {
-                        Log.e("encrypted", "RSA encryption error");
-                    }
-                    //Log.i("encoded RSA", Base64.encodeToString(encodedBytesRefreshRSA, Base64.DEFAULT));
 
                     /* build new JSON with ciphered texts */
                     try {
-                        jsonBodyParamsRefreshEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytesRefresh, Base64.DEFAULT));
-                        jsonBodyParamsRefreshEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytesRefreshRSA, Base64.DEFAULT));
+                        jsonBodyParamsRefreshEncrypted.put("data", Base64.encodeToString(encodedBytesRefresh, Base64.DEFAULT));
+                        jsonBodyParamsRefreshEncrypted.put("userID", userID);
+                        jsonBodyParamsRefreshEncrypted.put("signature", Base64.encodeToString(signedRefresh, Base64.DEFAULT));
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -617,8 +583,8 @@ public class AccessToken {
                             .build();
                     Log.i("Request Header", String.valueOf(requestRefresh.headers()));
                     Log.i("Request data", String.valueOf(jsonBodyParamsRefresh.toString()));
+                    Log.i("Request data", String.valueOf(jsonBodyParamsRefreshEncrypted.toString()));
                     Log.i("Encrypted token", cipherStringRefresh);
-                    Log.i("Encrypted UID", Base64.encodeToString(encodedBytesRefreshRSA, Base64.DEFAULT));
                     Log.i("Request info", String.valueOf(requestRefresh));
                     Response responseRefresh = null;
 
@@ -649,8 +615,10 @@ public class AccessToken {
 
 
                         String stringResponseEncrypted = "";
+                        String stringResponseSignature = "";
                         try {
-                            stringResponseEncrypted = responseBodyJson.getString("data_encrypted");
+                            stringResponseEncrypted = responseBodyJson.getString("data");
+                            stringResponseSignature = responseBodyJson.getString("signature");
                             //Log.i("enc response login", stringResponseEncrypted);
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -661,23 +629,28 @@ public class AccessToken {
                         byte[] decodedBytes = null;
                         try {
                             byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
-                            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                            cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                            byte[] respose16 = cipher.doFinal(respose64);
-                            //Log.i("respose16", String.valueOf(respose16.length));
-                            //Log.i("respose16", String.valueOf(respose16.length - 15));
-                            decodedBytes = new byte[respose16.length - 16];
-                            //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
-                            System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
-                            decipherString = new String(decodedBytes,"UTF-8");
-                            //Log.i("tokens json", decipherString);
-                        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        } catch (NoSuchAlgorithmException e) {
-                            e.printStackTrace();
-                        } catch (NoSuchPaddingException e) {
-                            e.printStackTrace();
-                        } catch (InvalidKeyException e) {
+                            byte[] signature64 = Base64.decode(stringResponseSignature, Base64.DEFAULT);
+
+                            Signature signature = Signature.getInstance("SHA512withECDSA");
+                            signature.initVerify((PublicKey) publicKeyServerSign);
+                            signature.update(respose64);
+                            boolean signatureVerified = signature.verify(signature64);
+
+                            if (signatureVerified) {
+                                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                                cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+                                byte[] respose16 = cipher.doFinal(respose64);
+                                //Log.i("respose16", String.valueOf(respose16.length));
+                                //Log.i("respose16", String.valueOf(respose16.length - 15));
+                                decodedBytes = new byte[respose16.length - 16];
+                                //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
+                                System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
+                                decipherString = new String(decodedBytes, "UTF-8");
+                                //Log.i("tokens json", decipherString);
+                            } else {
+                                return token;
+                            }
+                        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
                             e.printStackTrace();
                         }
 
@@ -710,8 +683,6 @@ public class AccessToken {
                     Log.i("RESULT", "refresh token non-existent");
 
                 }
-
-
 
             } else {
                 Log.i("RESULT", "response successfull");

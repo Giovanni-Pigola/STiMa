@@ -31,7 +31,15 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -94,15 +102,14 @@ public class ArCondicionadoActivity extends AppCompatActivity {
 
     private SecretKey secretKey = null;
 
+    private Key publicKeySign = null;
+    private Key privateKeySign = null;
+    private Key publicKeyServerSign = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ar_condicionado);
-
-        /* finishes activity on NFC read */
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("com.hello.action");
-        registerReceiver(receiver, filter);
 
         temperaturaView = (TextView) findViewById(R.id.textTemperaturaID);
 
@@ -301,30 +308,6 @@ public class ArCondicionadoActivity extends AppCompatActivity {
 
     }
 
-    /**
-     *
-     * Listens to the NFC read intent in order to finish other opened activities
-     *
-     * **/
-    BroadcastReceiver receiver = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            finish();
-
-        }
-    };
-
-    /**
-     *
-     * Calls for the standard finish() function
-     *
-     * **/
-    public void finish() {
-        unregisterReceiver(receiver);
-        super.finish();
-    };
-
     private class acUpdateServer extends AsyncTask<String, Void, Response> {
 
         @Override
@@ -369,9 +352,42 @@ public class ArCondicionadoActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
+            /* reads symmetric key from internal memory for signature */
+            try {
+                FileInputStream keyPrivSign = openFileInput("privateKeySign");
+                byte[] encKey2Sign = new byte[keyPrivSign.available()];
+                keyPrivSign.read(encKey2Sign);
+                keyPrivSign.close();
+
+                Log.i("len b Private 2", String.valueOf(encKey2Sign.length));
+                PKCS8EncodedKeySpec pkcsencodedSign = new PKCS8EncodedKeySpec(encKey2Sign);
+                privateKeySign = KeyFactory.getInstance("EC").generatePrivate(pkcsencodedSign);
+
+                FileInputStream keyPubSign = openFileInput("publicKeySign");
+                byte[] encKey1Sign = new byte[keyPubSign.available()];
+                keyPubSign.read(encKey1Sign);
+                keyPubSign.close();
+
+                Log.i("len b Public 2", String.valueOf(encKey1Sign.length));
+                X509EncodedKeySpec xencodedSign = new X509EncodedKeySpec(encKey1Sign);
+                publicKeySign = KeyFactory.getInstance("EC").generatePublic(xencodedSign);
+
+                FileInputStream keyPubSSign = openFileInput("publicKeyServerSign");
+                byte[] encKey3Sign = new byte[keyPubSSign.available()];
+                keyPubSSign.read(encKey3Sign);
+                keyPubSSign.close();
+
+                Log.i("len b Public Server", String.valueOf(encKey3Sign.length));
+                X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(encKey3Sign);
+                publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+                e.printStackTrace();
+            }
+
             /*cipher credential JSON with AES symmetric key*/
             String cipherString = "";
             byte[] encodedBytes = null;
+            byte[] signed = null;
             try {
                 secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
                 //Log.i("key received length", String.valueOf(SYMKEYb.length));
@@ -384,20 +400,20 @@ public class ArCondicionadoActivity extends AppCompatActivity {
                 cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
                 //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
                 //Log.i("sym key 64", cipherString);
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
+
+                Signature signature = Signature.getInstance("SHA512withECDSA");
+                signature.initSign((PrivateKey) privateKeySign);
+                signature.update(encodedBytes);
+                signed = signature.sign();
+            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
                 e.printStackTrace();
             }
 
             /* build new JSON with ciphered texts */
             JSONObject jsonBodyParamsEncrypted = new JSONObject();
             try {
-                jsonBodyParamsEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+                jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+                jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -461,6 +477,7 @@ public class ArCondicionadoActivity extends AppCompatActivity {
                 /* sends User back to login if update is not successful*/
                 Intent reLogin = new Intent(ArCondicionadoActivity.this, LoginActivity.class);
                 startActivity(reLogin);
+                finish();
             }
 
         }
