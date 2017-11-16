@@ -72,8 +72,6 @@ public class LoginActivity extends AppCompatActivity {
     private String facilityID = "";
     private String tagID;
 
-    private boolean isEntry;
-
     private FileOutputStream FOSU;
     private FileOutputStream FOST;
     private FileOutputStream FOSR;
@@ -99,22 +97,6 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-
-        /* get information from NFC */
-        extras = getIntent().getExtras();
-        if(extras!=null){
-            isEntry = extras.getBoolean("entry");
-            try{
-                facilityID = (String) extras.get("facilityID");
-            } catch (Exception e){
-                try {
-                    tagID = (String) extras.get("tagID");
-                }catch (Exception e1){
-                    e1.printStackTrace();
-                }
-                e.printStackTrace();
-            }
-        }
 
         loginEmail = (EditText) findViewById(R.id.loginNomeId);
         loginSenha = (EditText) findViewById(R.id.loginSenhaId);
@@ -441,14 +423,7 @@ public class LoginActivity extends AppCompatActivity {
                 }
 
                 /* Goes to next activity */
-                Intent loginIntent;
-                if (isEntry){
-                    DoorAccess doorAccess = new DoorAccess();
-                    loginIntent = doorAccess.testDoor(LoginActivity.this, tagID, stringToken, uniqueID, publicKeyServer);
-                } else {
-                    loginIntent = new Intent(LoginActivity.this, HomeActivity.class);
-                    loginIntent.putExtra("facilityID", facilityID);
-                }
+                Intent loginIntent = new Intent(LoginActivity.this, HomeActivity.class);
                 startActivity(loginIntent);
                 finish();
 

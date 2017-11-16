@@ -91,6 +91,14 @@ public class StartActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
 
+
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
         /* try to open UID from internal memory */
         try {
             FileInputStream FISU = openFileInput("UID");
@@ -299,9 +307,7 @@ public class StartActivity extends AppCompatActivity {
 //        new StartActivity.doHandShake().execute(publicKey, publicKeyServer, privateKey);
 
         new StartActivity.tryInstaLogin().execute();
-
     }
-
 
     /**
      *

@@ -24,7 +24,15 @@ import java.nio.charset.Charset;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -47,13 +55,30 @@ import okhttp3.Response;
 public class DoorAccess {
 
     private SecretKey secretKey = null;
+    private Key publicKeySign = null;
+    private Key privateKeySign = null;
+    private Key publicKeyServerSign = null;
+    private String uniqueID;
 
     /**
      *
      * Test Door checks which response is given by the server and sets the correct activity for the redirect
      *
      * **/
-    public Intent testDoor(Context context, String tagID, String token, String userID, Key publicKeyServer){
+    public Intent testDoor(Context context, String tagID, String token){
+
+        /* reads UID from internal memory */
+        try {
+            FileInputStream FISU = context.openFileInput("UID");
+            InternalFileReader IFR = new InternalFileReader();
+            uniqueID = IFR.readFile(FISU);
+            //Log.i("UID lido", uniqueID);
+            FISU.close();
+
+        } catch (IOException e) {
+            uniqueID = "";
+            e.printStackTrace();
+        }
 
         //Log.i("tokenNFC lido", token);
 
@@ -69,14 +94,6 @@ public class DoorAccess {
             e.printStackTrace();
         }
 
-        /* add UID to second JSON */
-        JSONObject jsonBodyParamsRSA = new JSONObject();
-        try {
-            jsonBodyParamsRSA.put("userID", userID);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
         /* reads symmetric key from internal memory */
         byte[] SYMKEYb = null;
         try {
@@ -88,9 +105,42 @@ public class DoorAccess {
             e.printStackTrace();
         }
 
+        /* reads symmetric key from internal memory for signature */
+        try {
+            FileInputStream keyPrivSign = context.openFileInput("privateKeySign");
+            byte[] encKey2Sign = new byte[keyPrivSign.available()];
+            keyPrivSign.read(encKey2Sign);
+            keyPrivSign.close();
+
+            Log.i("len b Private 2", String.valueOf(encKey2Sign.length));
+            PKCS8EncodedKeySpec pkcsencodedSign = new PKCS8EncodedKeySpec(encKey2Sign);
+            privateKeySign = KeyFactory.getInstance("EC").generatePrivate(pkcsencodedSign);
+
+            FileInputStream keyPubSign = context.openFileInput("publicKeySign");
+            byte[] encKey1Sign = new byte[keyPubSign.available()];
+            keyPubSign.read(encKey1Sign);
+            keyPubSign.close();
+
+            Log.i("len b Public 2", String.valueOf(encKey1Sign.length));
+            X509EncodedKeySpec xencodedSign = new X509EncodedKeySpec(encKey1Sign);
+            publicKeySign = KeyFactory.getInstance("EC").generatePublic(xencodedSign);
+
+            FileInputStream keyPubSSign = context.openFileInput("publicKeyServerSign");
+            byte[] encKey3Sign = new byte[keyPubSSign.available()];
+            keyPubSSign.read(encKey3Sign);
+            keyPubSSign.close();
+
+            Log.i("len b Public Server", String.valueOf(encKey3Sign.length));
+            X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(encKey3Sign);
+            publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+
         /*cipher credential JSON with AES symmetric key*/
         String cipherString = "";
         byte[] encodedBytes = null;
+        byte[] signed = null;
         try {
             secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
             //Log.i("key received length", String.valueOf(SYMKEYb.length));
@@ -103,32 +153,21 @@ public class DoorAccess {
             cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
             //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
             //Log.i("sym key 64", cipherString);
-        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
 
-        /* cipher second JSON with server public key*/
-        byte[] encodedBytesRSA = null;
-        try {
-            Cipher c = Cipher.getInstance("RSA/NONE/OAEPwithSHA-512andMGF1Padding");
-            c.init(Cipher.ENCRYPT_MODE, publicKeyServer);
-            encodedBytesRSA = c.doFinal(jsonBodyParamsRSA.toString().getBytes());
-        } catch (Exception e) {
-            Log.e("encrypted", "RSA encryption error");
+            Signature signature = Signature.getInstance("SHA512withECDSA");
+            signature.initSign((PrivateKey) privateKeySign);
+            signature.update(encodedBytes);
+            signed = signature.sign();
+        } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
+            e.printStackTrace();
         }
-        //Log.i("encoded RSA", Base64.encodeToString(encodedBytesRSA, Base64.DEFAULT));
 
         /* build new JSON with ciphered texts */
         JSONObject jsonBodyParamsEncrypted = new JSONObject();
         try {
-            jsonBodyParamsEncrypted.put("data_encrypted", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-            jsonBodyParamsEncrypted.put("data_encrypted_2", Base64.encodeToString(encodedBytesRSA, Base64.DEFAULT));
+            jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+            jsonBodyParamsEncrypted.put("userID", uniqueID);
+            jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -158,7 +197,6 @@ public class DoorAccess {
         if (response.isSuccessful()) {
 
             String responseString = "";
-            String facilityID = "Não identificado";
             JSONObject responseDoor = null;
 
             try {
@@ -169,8 +207,10 @@ public class DoorAccess {
 
             /* get encrypted JSON */
             String stringResponseEncrypted = "";
+            String stringResponseSignature = "";
             try {
-                stringResponseEncrypted = responseDoor.getString("data_encrypted");
+                stringResponseEncrypted = responseDoor.getString("data");
+                stringResponseSignature = responseDoor.getString("signature");
                 //Log.i("enc response login", stringResponseEncrypted);
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -181,23 +221,31 @@ public class DoorAccess {
             byte[] decodedBytes = null;
             try {
                 byte[] respose64 = Base64.decode(stringResponseEncrypted, Base64.DEFAULT);
-                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                byte[] respose16 = cipher.doFinal(respose64);
-                //Log.i("respose16", String.valueOf(respose16.length));
-                //Log.i("respose16", String.valueOf(respose16.length - 15));
-                decodedBytes = new byte[respose16.length - 16];
-                //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
-                System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
-                decipherString = new String(decodedBytes,"UTF-8");
-                //Log.i("tokens json", decipherString);
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (InvalidKeyException e) {
+                byte[] signature64 = Base64.decode(stringResponseSignature, Base64.DEFAULT);
+                Log.i("signature 64", stringResponseSignature);
+
+                Signature signature = Signature.getInstance("SHA512withECDSA");
+                signature.initVerify((PublicKey) publicKeyServerSign);
+                signature.update(respose64);
+                boolean signatureVerified = signature.verify(signature64);
+                Log.i("sigVer", String.valueOf(signatureVerified));
+
+                if (signatureVerified) {
+                    Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                    cipher.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+                    byte[] respose16 = cipher.doFinal(respose64);
+                    //Log.i("respose16", String.valueOf(respose16.length));
+                    //Log.i("respose16", String.valueOf(respose16.length - 15));
+                    decodedBytes = new byte[respose16.length - 16];
+                    //Log.i("decodedBytes empty", String.valueOf(decodedBytes.length));
+                    System.arraycopy(respose16, 16, decodedBytes, 0, decodedBytes.length);
+                    decipherString = new String(decodedBytes, "UTF-8");
+                    //Log.i("tokens json", decipherString);
+                } else {
+                    intentPorta = new Intent(context, LoginActivity.class);
+                    return intentPorta;
+                }
+            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
                 e.printStackTrace();
             }
 
@@ -227,14 +275,6 @@ public class DoorAccess {
                     break;
                 case "Facility Access":
                     intentPorta = new Intent(context, WelcomeActivity.class);
-                    try {
-                        facilityID = responseBodyJsonDecrypted.getString("FacilityID");
-                        Log.i("facility ID DA", facilityID);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    intentPorta.putExtra("facilityID", facilityID);
-                    intentPorta.putExtra("entry", false);
                     break;
                 default:
                     //Log.i("entrou default", "entrou default door switch");

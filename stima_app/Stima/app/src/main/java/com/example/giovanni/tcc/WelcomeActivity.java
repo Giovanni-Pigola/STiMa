@@ -17,12 +17,6 @@ public class WelcomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_welcome);
 
-        /* get sent facility ID */
-        extras = getIntent().getExtras();
-        if(extras!=null){
-            facilityID = (String) extras.get("facilityID");
-        }
-
         /* sets a timer before redirecting to home */
         new CountDownTimer(15000, 1000) {
 
@@ -31,7 +25,6 @@ public class WelcomeActivity extends AppCompatActivity {
 
             public void onFinish() {
                 Intent endWelcome = new Intent(WelcomeActivity.this, HomeActivity.class);
-                endWelcome.putExtra("facilityID", facilityID);
                 startActivity(endWelcome);
             }
         }.start();

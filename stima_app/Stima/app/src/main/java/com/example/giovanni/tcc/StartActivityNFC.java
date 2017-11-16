@@ -52,7 +52,7 @@ public class StartActivityNFC extends AppCompatActivity {
     private FileInputStream FJWT;
     private FileInputStream FJWR;
 
-    private String uniqueID;
+
     private String tokenLido;
 
     private Key publicKeyServer = null;
@@ -209,25 +209,11 @@ public class StartActivityNFC extends AppCompatActivity {
             if (bool) {
                 Log.i("TOKEN PORTA", "Token Valido");
 
-                /* reads UID from internal memory */
-                try {
-                    FileInputStream FISU = openFileInput("UID");
-                    InternalFileReader IFR = new InternalFileReader();
-                    uniqueID = IFR.readFile(FISU);
-                    //Log.i("UID lido", uniqueID);
-                    FISU.close();
-
-                } catch (IOException e) {
-                    uniqueID = "";
-                    e.printStackTrace();
-                }
-
                 String token = params[1];
                 //Log.i("tokenNFC lido", token);
 
                 DoorAccess doorAccess = new DoorAccess();
-                Intent intentDoorCheck = doorAccess.testDoor(StartActivityNFC.this, tagID, token, uniqueID, publicKeyServer);
-
+                Intent intentDoorCheck = doorAccess.testDoor(StartActivityNFC.this, tagID, token);
 
                 startActivity(intentDoorCheck);
 
