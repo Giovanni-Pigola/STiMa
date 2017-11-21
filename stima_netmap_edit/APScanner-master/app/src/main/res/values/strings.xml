@@ -1,0 +1,49 @@
+<resources>
+    <string name="app_name">net.map</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="john_doe_email">john@net.map</string>
+
+    <string-array name="normalization_methods">
+        <item>Kalman Filter</item>
+        <item>Arithmetic Mean</item>
+    </string-array>
+
+
+    <string name="facilities">Facilities</string>
+    <string name="floors">Floors</string>
+    <string name="zones">Zones</string>
+    <string name="facility_name">Facility name</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="acquisitions">Acquisitions</string>
+    <string name="acquisition_name">Acquisition name</string>
+    <string name="zone_name">Zone Name</string>
+    <string name="Placeholder">Placeholder</string>
+    <string name="date_placeholder">dd/mmm/yyyy hh:mm</string>
+    <string name="normalization_method">Normalization Method:</string>
+    <string name="acquisition_interval">Acquisitions Interval:</string>
+    <string name="samples_per_acquisition">Samples per Acquisition:</string>
+    <string name="total_aps">Total of Access Points Scanned:</string>
+    <string name="erase_current_acquisition_set">Erase current acquisition set</string>
+    <string name="normalization_algorithm">Normalization Algorithm:</string>
+    <string name="number_of_scans_per_acquisition">Number of scans per acquisition:</string>
+    <string name="interval_between_scans">Interval between scans:</string>
+    <string name="scans_per_acquisition">Scans per acquisition:</string>
+    <string name="interval_beetween_scans">Interval between scans:</string>
+    <string name="current_number_of_acquisitions">Current number of acquisitions:</string>
+    <string name="current_acquisition_set_settings">Current acquisition set settings:</string>
+    <string name="update_interval_seconds">Update interval (seconds):</string>
+    <string name="_2_0">2.0</string>
+    <string name="acquire_current_zone">Acquire current zone</string>
+    <string name="upload_current_acquisition_set">Upload current acquisition set</string>
+    <string name="predict_zone">Predict Zone</string>
+    <string name="delete_facility">Delete facility</string>
+    <string name="delete_floor">Delete floor</string>
+    <string name="delete_zone">Delete zone</string>
+    <string name="clear_zone">Clear zone</string>
+    <string name="use_continuous_scan_mode">Use continuous scan mode</string>
+    <string name="continuous_scan">Continuous scan</string>
+    <string name="urlServer">52.15.235.164</string>
+    <color name="white">#FFFFFF</color>
+</resources>

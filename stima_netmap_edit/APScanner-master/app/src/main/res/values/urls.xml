@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sign_in_url">http://52.15.235.164:3000/users/sign_in</string>
+
+    <string name="get_facilities_url">http://52.15.235.164:3000/facilities</string>
+    <string name="get_floors_url">http://52.15.235.164:3000/floors</string>
+    <string name="new_facility_url">http://52.15.235.164:3000/create_facility</string>
+    <string name="new_floor_url">http://52.15.235.164:3000/create_floor</string>
+
+    <string name="get_zones_url">http://52.15.235.164:3000/zones</string>
+    <string name="new_zone_url">http://52.15.235.164:3000/create_zone</string>
+
+    <string name="post_acquisition_set_url">http://52.15.235.164:3000/create_acquisition_set</string>
+
+
+    <string name="train_ml_url">http://52.15.235.164:2000/train</string>
+    <string name="prepare_data_for_ml_url">http://52.15.235.164:2000/prepare</string>
+    <string name="predict_zone_url">http://52.15.235.164:2000/singleTest</string>
+
+
+</resources>
