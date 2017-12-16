@@ -196,7 +196,7 @@ public class IluminacaoActivity extends AppCompatActivity {
 
             /* get parameters and build JSON */
             try {
-                jsonBodyParams.put("lightID", "1");
+                jsonBodyParams.put("lightID", lightID);
                 jsonBodyParams.put("lightIsTurnedOn", turnedOnUpdate);
                 jsonBodyParams.put("lightIntensity", intensityUpdate);
             } catch (JSONException e) {

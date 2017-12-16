@@ -91,7 +91,6 @@ public class HomeActivity extends AppCompatActivity {
     private ImageView heatMapButton;
     private ImageView userImage;
     private TextView localizacaoStatus;
-    private Bundle extras;
     private ResultResponse resultResponse;
     private WifiManager wManager;
     private LinkedList<List<ScanResult>> scanResultsCache;
@@ -122,8 +121,6 @@ public class HomeActivity extends AppCompatActivity {
     private Key privateKeySign = null;
     private Key publicKeyServerSign = null;
 
-    private IncomingMessageHandler mHandler;
-    private ComponentName mServiceComponent;
     private int mJobId = 0;
     private static final String TAG = HomeActivity.class.getSimpleName();
 
@@ -138,9 +135,6 @@ public class HomeActivity extends AppCompatActivity {
 
         facilityID = pref.getString("FacilityID","");
         Log.i("autofind", facilityID);
-
-        mHandler = new IncomingMessageHandler(this);
-        mServiceComponent = new ComponentName(this, LocalizationJob.class);
 
         airConditioningButton = (ImageView) findViewById(R.id.airConditioningId);
         lightBulbButton = (ImageView) findViewById(R.id.lightId);
@@ -276,14 +270,14 @@ public class HomeActivity extends AppCompatActivity {
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             OkHttpClient client = new OkHttpClient();
 
-            JSONObject jsonBodyParams = new JSONObject();
+//            JSONObject jsonBodyParams = new JSONObject();
 
             /* puts the air conditioning ID parameters in the first JSON */
-            try {
-                jsonBodyParams.put("acID", "1");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                jsonBodyParams.put("acID", "1");
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
 
             /* reads symmetric key from internal memory */
             byte[] SYMKEYb = null;
@@ -329,38 +323,38 @@ public class HomeActivity extends AppCompatActivity {
             }
 
             /*cipher credential JSON with AES symmetric key*/
-            String cipherString = "";
-            byte[] encodedBytes = null;
-            byte[] signed = null;
-            try {
+//            String cipherString = "";
+//            byte[] encodedBytes = null;
+//            byte[] signed = null;
+//            try {
                 secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
-                //Log.i("key received length", String.valueOf(SYMKEYb.length));
-                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                byte[] cipherIV = cipher.getIV();
-                String cipherIVString = new String(cipherIV,"UTF-8");
-                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
-                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
-                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
-                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
-                //Log.i("sym key 64", cipherString);
-
-                Signature signature = Signature.getInstance("SHA512withECDSA");
-                signature.initSign((PrivateKey) privateKeySign);
-                signature.update(encodedBytes);
-                signed = signature.sign();
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | SignatureException e) {
-                e.printStackTrace();
-            }
+//                //Log.i("key received length", String.valueOf(SYMKEYb.length));
+//                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+//                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+//                byte[] cipherIV = cipher.getIV();
+//                String cipherIVString = new String(cipherIV,"UTF-8");
+//                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
+//                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
+//                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
+//                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
+//                //Log.i("sym key 64", cipherString);
+//
+//                Signature signature = Signature.getInstance("SHA512withECDSA");
+//                signature.initSign((PrivateKey) privateKeySign);
+//                signature.update(encodedBytes);
+//                signed = signature.sign();
+//            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | SignatureException e) {
+//                e.printStackTrace();
+//            }
 
             /* build new JSON with ciphered texts */
-            JSONObject jsonBodyParamsEncrypted = new JSONObject();
-            try {
-                jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-                jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+//            JSONObject jsonBodyParamsEncrypted = new JSONObject();
+//            try {
+//                jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+//                jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
 
             /* tests and, if needed, replaces the current Access Token available*/
             try {
@@ -370,15 +364,15 @@ public class HomeActivity extends AppCompatActivity {
             }
 
             /* make request to server */
-            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+//            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
             Request request = new Request.Builder()
                     .url(getResources().getString(R.string.air_conditioning_url))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "JWT " + token)
-                    .post(loginBody)
+                    .get()
                     .build();
             Log.i("request", String.valueOf(request.headers()));
-            Log.i("request", String.valueOf(jsonBodyParams.toString()));
+//            Log.i("request", String.valueOf(jsonBodyParams.toString()));
             Log.i("request", String.valueOf(request));
             Response response = null;
 
@@ -475,6 +469,8 @@ public class HomeActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
+                Toast.makeText(HomeActivity.this, acID, Toast.LENGTH_SHORT).show();
+
                 /* transmits Air Conditioning parameters to Air Conditioning activity */
                 Intent airIntent = new Intent(HomeActivity.this, ArCondicionadoActivity.class);
                 airIntent.putExtra("acID", acID);
@@ -525,14 +521,14 @@ public class HomeActivity extends AppCompatActivity {
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             OkHttpClient client = new OkHttpClient();
 
-            JSONObject jsonBodyParams = new JSONObject();
+//            JSONObject jsonBodyParams = new JSONObject();
 
             /* puts the light ID parameters in the first JSON */
-            try {
-                jsonBodyParams.put("lightID", "1");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                jsonBodyParams.put("lightID", "1");
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
 
              /* reads symmetric key from internal memory */
             byte[] SYMKEYb = null;
@@ -578,38 +574,38 @@ public class HomeActivity extends AppCompatActivity {
             }
 
             /*cipher credential JSON with AES symmetric key*/
-            String cipherString = "";
-            byte[] encodedBytes = null;
-            byte[] signed = null;
-            try {
+//            String cipherString = "";
+//            byte[] encodedBytes = null;
+//            byte[] signed = null;
+//            try {
                 secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
-                //Log.i("key received length", String.valueOf(SYMKEYb.length));
-                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
-                byte[] cipherIV = cipher.getIV();
-                String cipherIVString = new String(cipherIV,"UTF-8");
-                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
-                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
-                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
-                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
-                //Log.i("sym key 64", cipherString);
-
-                Signature signature = Signature.getInstance("SHA512withECDSA");
-                signature.initSign((PrivateKey) privateKeySign);
-                signature.update(encodedBytes);
-                signed = signature.sign();
-            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
-                e.printStackTrace();
-            }
+//                //Log.i("key received length", String.valueOf(SYMKEYb.length));
+//                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+//                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+//                byte[] cipherIV = cipher.getIV();
+//                String cipherIVString = new String(cipherIV,"UTF-8");
+//                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
+//                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
+//                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
+//                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
+//                //Log.i("sym key 64", cipherString);
+//
+//                Signature signature = Signature.getInstance("SHA512withECDSA");
+//                signature.initSign((PrivateKey) privateKeySign);
+//                signature.update(encodedBytes);
+//                signed = signature.sign();
+//            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
+//                e.printStackTrace();
+//            }
 
             /* build new JSON with ciphered texts */
-            JSONObject jsonBodyParamsEncrypted = new JSONObject();
-            try {
-                jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
-                jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+//            JSONObject jsonBodyParamsEncrypted = new JSONObject();
+//            try {
+//                jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+//                jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
 
             /* tests and, if needed, replaces the current Access Token available*/
             try {
@@ -619,15 +615,15 @@ public class HomeActivity extends AppCompatActivity {
             }
 
             /* make request to server */
-            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+//            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
             Request request = new Request.Builder()
                     .url(getResources().getString(R.string.ligh_url))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "JWT " + token)
-                    .post(loginBody)
+                    .get()
                     .build();
             Log.i("request", String.valueOf(request.headers()));
-            Log.i("request", String.valueOf(jsonBodyParams.toString()));
+//            Log.i("request", String.valueOf(jsonBodyParams.toString()));
             Log.i("request", String.valueOf(request));
             Response response = null;
 
@@ -724,6 +720,8 @@ public class HomeActivity extends AppCompatActivity {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+
+                Toast.makeText(HomeActivity.this, lightID, Toast.LENGTH_SHORT).show();
 
                 /* transmits Lighting parameters to Lighting activity */
                 Intent lightIntent = new Intent(HomeActivity.this, IluminacaoActivity.class);
@@ -848,94 +846,6 @@ public class HomeActivity extends AppCompatActivity {
             finish();
             overridePendingTransition(0, 0);
         }
-    }
-
-    /**
-     * Executed when user clicks on SCHEDULE JOB.
-     */
-    public void scheduleJob(View v) {
-        JobInfo.Builder builder = new JobInfo.Builder(mJobId++, mServiceComponent);
-
-
-//        // Extras, work duration.
-//        PersistableBundle extras = new PersistableBundle();
-//        extras.putLong(WORK_DURATION_KEY, Long.valueOf(workDuration) * 1000);
-//        builder.setExtras(extras);
-
-        // Schedule job
-        Log.d(TAG, "Scheduling job");
-        JobScheduler tm = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        tm.schedule(builder.build());
-    }
-
-    private static class IncomingMessageHandler extends Handler {
-
-        // Prevent possible leaks with a weak reference.
-        private WeakReference<HomeActivity> mActivity;
-
-        IncomingMessageHandler(HomeActivity activity) {
-            super(/* default looper */);
-            this.mActivity = new WeakReference<>(activity);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            HomeActivity mainActivity = mActivity.get();
-            if (mainActivity == null) {
-                // Activity is no longer available, exit.
-                return;
-            }
-
-            Message m;
-//            switch (msg.what) {
-//                /*
-//                 * Receives callback from the service when a job has landed
-//                 * on the app. Turns on indicator and sends a message to turn it off after
-//                 * a second.
-//                 */
-//                case MSG_COLOR_START:
-//                    // Start received, turn on the indicator and show text.
-//                    showStartView.setBackgroundColor(getColor(R.color.start_received));
-//                    updateParamsTextView(msg.obj, "started");
-//
-//                    // Send message to turn it off after a second.
-//                    m = Message.obtain(this, MSG_UNCOLOR_START);
-//                    sendMessageDelayed(m, 1000L);
-//                    break;
-//                /*
-//                 * Receives callback from the service when a job that previously landed on the
-//                 * app must stop executing. Turns on indicator and sends a message to turn it
-//                 * off after two seconds.
-//                 */
-//                case MSG_COLOR_STOP:
-//                    // Stop received, turn on the indicator and show text.
-//                    showStopView.setBackgroundColor(getColor(R.color.stop_received));
-//                    updateParamsTextView(msg.obj, "stopped");
-//
-//                    // Send message to turn it off after a second.
-//                    m = obtainMessage(MSG_UNCOLOR_STOP);
-//                    sendMessageDelayed(m, 2000L);
-//                    break;
-//                case MSG_UNCOLOR_START:
-//                    showStartView.setBackgroundColor(getColor(R.color.none_received));
-//                    updateParamsTextView(null, "");
-//                    break;
-//                case MSG_UNCOLOR_STOP:
-//                    showStopView.setBackgroundColor(getColor(R.color.none_received));
-//                    updateParamsTextView(null, "");
-//                    break;
-//            }
-        }
-
-//        private void updateParamsTextView(@Nullable Object jobId, String action) {
-//            TextView paramsTextView = (TextView) mActivity.get().findViewById(R.id.task_params);
-//            if (jobId == null) {
-//                paramsTextView.setText("");
-//                return;
-//            }
-//            String jobIdText = String.valueOf(jobId);
-//            paramsTextView.setText(String.format("Job ID %s %s", jobIdText, action));
-//        }
     }
 
 }

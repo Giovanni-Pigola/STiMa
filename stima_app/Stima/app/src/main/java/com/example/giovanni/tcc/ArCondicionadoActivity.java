@@ -332,7 +332,7 @@ public class ArCondicionadoActivity extends AppCompatActivity {
 
             /* gets parameters and build JSON */
             try {
-                jsonBodyParams.put("acID", "1");
+                jsonBodyParams.put("acID", acID);
                 jsonBodyParams.put("acIsTurnedOn", "1");
                 jsonBodyParams.put("acTemp", temperaturaUpdate);
                 jsonBodyParams.put("acFanSpeed", acFanSpeedUpdate);
