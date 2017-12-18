@@ -163,8 +163,12 @@ public class LoginActivity extends AppCompatActivity {
                 String emailteste = loginEmail.getText().toString();
                 String senhateste = loginSenha.getText().toString();
 
+//                emailteste = "asd";
+//                senhateste = "qwerasdf";
+
                 emailteste = "asd";
                 senhateste = "qwerasdf";
+
                 new attemptLogin().execute(emailteste, senhateste);
 
             }

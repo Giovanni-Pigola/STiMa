@@ -1,4 +1,13 @@
 <resources>
+    <string-array name="Floors">
+        <item>B1</item>
+        <item>B2</item>
+    </string-array>
+
+    <string-array name="Facilities">
+        <item>Poli Elétrica</item>
+    </string-array>
+
     <string name="app_name">TCC</string>
     <string name="sampleTextDepto">Departamento de Engenharia de computação</string>
     <string name="sampleNameEmpl">Fulano de Tal</string>
@@ -17,4 +26,9 @@
     <string name="tituloCalendario">Controle de Ponto</string>
     <string name="tituloMapaCalor">Controle de Movimentação Pessoal</string>
     <string name="buttonPorta">Abrir</string>
+    <string name="heatMapImg">heatMapImg</string>
+    <string name="spinnerFacility">Poli Elétrica</string>
+    <string name="spinnerFloor1">B1</string>
+    <string name="spinnerFloor2">B2</string>
+
 </resources>

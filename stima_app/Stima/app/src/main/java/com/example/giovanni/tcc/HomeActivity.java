@@ -10,6 +10,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
@@ -126,6 +128,8 @@ public class HomeActivity extends AppCompatActivity {
 
     private SharedPreferences pref;
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -210,8 +214,7 @@ public class HomeActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                Intent heatMapIntent = new Intent(HomeActivity.this, MapaDeCalorActivity.class);
-                startActivity(heatMapIntent);
+                new HomeActivity.getHeatMap().execute(tokenLido);
             }
         });
 
@@ -748,6 +751,190 @@ public class HomeActivity extends AppCompatActivity {
             }
 
         }
+    }
+
+    private class getHeatMap extends AsyncTask<String, Void, Response> {
+
+        @Override
+        protected void onPreExecute() {
+            loadingDialog = ProgressDialog.show(HomeActivity.this,
+                    "Aguarde...", "Gerando mapa de calor.");
+            loadingDialog.setCancelable(false);
+        }
+
+        protected Response doInBackground(String... strings) {
+
+            String token = strings[0];
+
+            MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+            OkHttpClient client = new OkHttpClient();
+
+            JSONObject jsonBodyParams = new JSONObject();
+
+            /* puts the light ID parameters in the first JSON */
+//            try {
+//                jsonBodyParams.put("lightID", "1");
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+            try {
+                jsonBodyParams.put("facility", "Poli Elétrica");
+                jsonBodyParams.put("floor", "B2");
+                jsonBodyParams.put("type", "mapa");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+             /* reads symmetric key from internal memory */
+            byte[] SYMKEYb = null;
+            try {
+                FileInputStream SYMKEY = openFileInput("secretKey");
+                SYMKEYb = new byte[SYMKEY.available()];
+                SYMKEY.read(SYMKEYb);
+                SYMKEY.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            /* reads symmetric key from internal memory for signature */
+            try {
+                FileInputStream keyPrivSign = openFileInput("privateKeySign");
+                byte[] encKey2Sign = new byte[keyPrivSign.available()];
+                keyPrivSign.read(encKey2Sign);
+                keyPrivSign.close();
+
+                Log.i("len b Private 2", String.valueOf(encKey2Sign.length));
+                PKCS8EncodedKeySpec pkcsencodedSign = new PKCS8EncodedKeySpec(encKey2Sign);
+                privateKeySign = KeyFactory.getInstance("EC").generatePrivate(pkcsencodedSign);
+
+                FileInputStream keyPubSign = openFileInput("publicKeySign");
+                byte[] encKey1Sign = new byte[keyPubSign.available()];
+                keyPubSign.read(encKey1Sign);
+                keyPubSign.close();
+
+                Log.i("len b Public 2", String.valueOf(encKey1Sign.length));
+                X509EncodedKeySpec xencodedSign = new X509EncodedKeySpec(encKey1Sign);
+                publicKeySign = KeyFactory.getInstance("EC").generatePublic(xencodedSign);
+
+                FileInputStream keyPubSSign = openFileInput("publicKeyServerSign");
+                byte[] encKey3Sign = new byte[keyPubSSign.available()];
+                keyPubSSign.read(encKey3Sign);
+                keyPubSSign.close();
+
+                Log.i("len b Public Server", String.valueOf(encKey3Sign.length));
+                X509EncodedKeySpec pubServerEncodedSign = new X509EncodedKeySpec(encKey3Sign);
+                publicKeyServerSign = KeyFactory.getInstance("EC").generatePublic(pubServerEncodedSign);
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+                e.printStackTrace();
+            }
+
+            /*cipher credential JSON with AES symmetric key*/
+            String cipherString = "";
+            byte[] encodedBytes = null;
+            byte[] signed = null;
+            try {
+                secretKey = new SecretKeySpec(SYMKEYb, 0, SYMKEYb.length, "AES");
+                //Log.i("key received length", String.valueOf(SYMKEYb.length));
+                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(new byte[16]));
+                byte[] cipherIV = cipher.getIV();
+                String cipherIVString = new String(cipherIV,"UTF-8");
+                //Log.i("IV Length", String.valueOf(cipherIVString.length()));
+                encodedBytes = cipher.doFinal((cipherIVString + jsonBodyParams.toString()).getBytes(Charset.forName("UTF-8")));
+                cipherString = Base64.encodeToString(encodedBytes, Base64.DEFAULT);
+                //Log.i("sym key 64", Base64.encodeToString(SYMKEYb, Base64.DEFAULT));
+                //Log.i("sym key 64", cipherString);
+
+                Signature signature = Signature.getInstance("SHA512withECDSA");
+                signature.initSign((PrivateKey) privateKeySign);
+                signature.update(encodedBytes);
+                signed = signature.sign();
+            } catch (BadPaddingException | IllegalBlockSizeException | InvalidAlgorithmParameterException | UnsupportedEncodingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | SignatureException e) {
+                e.printStackTrace();
+            }
+//
+//            /* build new JSON with ciphered texts */
+            JSONObject jsonBodyParamsEncrypted = new JSONObject();
+            try {
+                jsonBodyParamsEncrypted.put("data", Base64.encodeToString(encodedBytes, Base64.DEFAULT));
+                jsonBodyParamsEncrypted.put("signature", Base64.encodeToString(signed, Base64.DEFAULT));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            /* tests and, if needed, replaces the current Access Token available*/
+            try {
+                token = accessToken.validaLoginTokenReturn(HomeActivity.this);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            /* make request to server */
+            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParamsEncrypted.toString());
+//            RequestBody loginBody = RequestBody.create(JSON, jsonBodyParams.toString());
+            Request request = new Request.Builder()
+                    .url(getResources().getString(R.string.get_heat_map))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "JWT " + token)
+                    .post(loginBody)
+                    .build();
+            Log.i("request", String.valueOf(request.headers()));
+            Log.i("request", String.valueOf(jsonBodyParams.toString()));
+            Log.i("request", String.valueOf(request));
+            Response response = null;
+
+            try {
+                response = client.newCall(request).execute();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+            return response;
+        }
+
+        protected void onPostExecute(Response response){
+            loadingDialog.dismiss();
+
+            Log.i("request", String.valueOf(response));
+            if (response.isSuccessful()) {
+
+
+                Bitmap responseHeatmapImage = null;
+
+                try {
+                    responseHeatmapImage = BitmapFactory.decodeStream(response.body().byteStream());
+
+                    FileOutputStream ImgHeatMap = openFileOutput("heatmap", Context.MODE_PRIVATE);
+                    responseHeatmapImage.compress(Bitmap.CompressFormat.PNG, 100, ImgHeatMap);
+                    ImgHeatMap.close();
+
+                } catch (Exception e) {
+                    Log.e("Error", e.getMessage());
+                    e.printStackTrace();
+                }
+
+
+                Intent heatMapIntent = new Intent(HomeActivity.this, HeatMap.class);
+//                heatMapIntent.putExtra("bitmap", responseHeatmapImage);
+                startActivity(heatMapIntent);
+
+                //Toast.makeText(HomeActivity.this, "printou aqui " + lightIntensity, Toast.LENGTH_SHORT).show();
+
+            } else {
+
+                /* sends user back to login page in case token verification fails */
+                Intent reLogin = new Intent(HomeActivity.this, LoginActivity.class);
+
+                Toast toast = Toast.makeText(HomeActivity.this,
+                        "Something went wrong, try again later", Toast.LENGTH_SHORT);
+                toast.show();
+
+                startActivity(reLogin);
+                finish();
+            }
+        }
+
     }
 
     /**
