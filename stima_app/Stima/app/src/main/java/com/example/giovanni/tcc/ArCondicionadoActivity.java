@@ -312,9 +312,9 @@ public class ArCondicionadoActivity extends AppCompatActivity {
 
         @Override
         protected void onPreExecute() {
-//            loadingDialog = ProgressDialog.show(ArCondicionadoActivity.this,
-//                    "Please wait...", "Updating data to server");
-//            loadingDialog.setCancelable(false);
+            loadingDialog = ProgressDialog.show(ArCondicionadoActivity.this,
+                    "Aguarde...", "Atualizando dados do ar condicionado...");
+            loadingDialog.setCancelable(false);
         }
 
         protected Response doInBackground(String... params) {
@@ -451,10 +451,10 @@ public class ArCondicionadoActivity extends AppCompatActivity {
 
         protected void onPostExecute(Response response) {
 
-            //loadingDialog.dismiss();
+            loadingDialog.dismiss();
 
             if (response.isSuccessful()){
-                Toast.makeText(ArCondicionadoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
+//                Toast.makeText(ArCondicionadoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
 
                 Toast toast = Toast.makeText(ArCondicionadoActivity.this,
                         "AC data updated successfully", Toast.LENGTH_SHORT);
@@ -468,7 +468,7 @@ public class ArCondicionadoActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
-                Toast.makeText(ArCondicionadoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
+//                Toast.makeText(ArCondicionadoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
 
                 Toast toast = Toast.makeText(ArCondicionadoActivity.this,
                         "Connection timed out, please log in again", Toast.LENGTH_SHORT);

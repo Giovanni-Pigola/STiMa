@@ -78,8 +78,6 @@ public class HeatMap extends AppCompatActivity {
     private Key privateKeySign = null;
     private Key publicKeyServerSign = null;
 
-    private Bundle extras;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

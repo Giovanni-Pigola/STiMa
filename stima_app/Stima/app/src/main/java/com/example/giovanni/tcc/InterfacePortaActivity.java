@@ -5,12 +5,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+
+import java.util.Objects;
 
 public class InterfacePortaActivity extends AppCompatActivity {
 
     private Button buttonAbrir;
     private TextView doorNumber;
+    private EditText senhaPorta;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,26 +23,20 @@ public class InterfacePortaActivity extends AppCompatActivity {
 
         buttonAbrir = (Button) findViewById(R.id.buttonAbrirId);
         doorNumber = (TextView) findViewById(R.id.doorNumberId);
+        senhaPorta = (EditText) findViewById(R.id.editTextID);
 
         buttonAbrir.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Intent abrirIntent = new Intent(InterfacePortaActivity.this, EntradaActivity.class);
-                startActivity(abrirIntent);
-
+                if(Objects.equals(senhaPorta.getText().toString(), "qwerasdf")){
+                    Intent abrirIntent = new Intent(InterfacePortaActivity.this, EntradaActivity.class);
+                    startActivity(abrirIntent);
+                } else {
+                    Intent denyIntent = new Intent(InterfacePortaActivity.this, EntradaNegadaActivity.class);
+                    startActivity(denyIntent);
+                }
             }
         });
-
-        doorNumber.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                Intent denyIntent = new Intent(InterfacePortaActivity.this, EntradaNegadaActivity.class);
-                startActivity(denyIntent);
-
-            }
-        });
-
     }
 }

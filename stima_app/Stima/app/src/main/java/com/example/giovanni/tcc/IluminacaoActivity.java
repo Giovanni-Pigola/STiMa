@@ -179,7 +179,7 @@ public class IluminacaoActivity extends AppCompatActivity {
         @Override
         protected void onPreExecute() {
             loadingDialog = ProgressDialog.show(IluminacaoActivity.this,
-                    "Please wait...", "Updating data to server");
+                    "Aguarde...", "Atualizando dados de iluminação...");
             loadingDialog.setCancelable(false);
         }
 
@@ -314,7 +314,7 @@ public class IluminacaoActivity extends AppCompatActivity {
             loadingDialog.dismiss();
 
             if (response.isSuccessful()){
-                Toast.makeText(IluminacaoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
+//                Toast.makeText(IluminacaoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
 
                 Toast toast = Toast.makeText(IluminacaoActivity.this,
                         "Lighting data updated successfully", Toast.LENGTH_SHORT);
@@ -326,7 +326,7 @@ public class IluminacaoActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
-                Toast.makeText(IluminacaoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
+//                Toast.makeText(IluminacaoActivity.this, response.toString(), Toast.LENGTH_LONG).show();
 
                 Toast toast = Toast.makeText(IluminacaoActivity.this,
                         "Connection timed out, please log in again", Toast.LENGTH_SHORT);

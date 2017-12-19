@@ -65,7 +65,7 @@
         android:layout_centerHorizontal="true" />
 
     <EditText
-        android:id="@+id/editText"
+        android:id="@+id/editTextID"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ems="10"
@@ -82,7 +82,7 @@
         android:layout_height="35dp"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_below="@+id/editText"
+        android:layout_below="@+id/editTextID"
         android:layout_marginTop="14dp"
         android:background="@color/colorPrimaryDark"
         android:text="@string/buttonPorta"

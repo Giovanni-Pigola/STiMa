@@ -21,7 +21,7 @@
         android:layout_toEndOf="@+id/profileID"
         android:layout_toRightOf="@+id/profileID"
         android:text="@string/sampleNameEmpl"
-        android:textAlignment="center"
+        android:textAlignment="textStart"
         android:textColor="@color/textColorPrimary"
         android:textSize="30sp" />
 
@@ -42,7 +42,7 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_marginBottom="54dp"
-        app:srcCompat="@drawable/blank_profile" />
+        app:srcCompat="@drawable/blank_profile2" />
 
     <GridLayout
         android:id="@+id/gridLayout2"
@@ -88,7 +88,7 @@
             android:layout_below="@+id/airConditioningId"
             android:layout_marginLeft="25dp"
             android:layout_marginRight="25dp"
-            app:srcCompat="@drawable/calendar" />
+            app:srcCompat="@drawable/piechart2" />
 
         <ImageView
             android:id="@+id/heatMapId"
